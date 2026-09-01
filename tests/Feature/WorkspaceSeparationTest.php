@@ -5,9 +5,10 @@ namespace Tests\Feature;
 use App\Models\Church;
 use App\Models\Community;
 use App\Models\User;
+use App\Support\Rbac;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class WorkspaceSeparationTest extends TestCase
@@ -145,6 +146,8 @@ class WorkspaceSeparationTest extends TestCase
 
     private function makeWorkspaceUsers(): array
     {
+        $this->seed(RolePermissionSeeder::class);
+
         $community = Community::create([
             'designation' => 'Communaute Workspace',
             'headquarters_city' => 'Lubumbashi',
@@ -199,8 +202,7 @@ class WorkspaceSeparationTest extends TestCase
             'level' => 'eglise',
             'status' => 'actif',
         ]);
-        Role::findOrCreate('SuperAdmin');
-        $superAdmin->assignRole('SuperAdmin');
+        $superAdmin->assignRole(Rbac::ADMINISTRATEUR);
 
         return [$communityUser, $churchUser, $church, $otherChurch, $superAdmin];
     }

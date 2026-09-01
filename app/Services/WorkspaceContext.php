@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Church;
 use App\Models\Community;
 use App\Models\User;
+use App\Support\Rbac;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -12,7 +13,12 @@ class WorkspaceContext
 {
     public function canSwitch(?User $user): bool
     {
-        return (bool) $user?->hasRole('SuperAdmin');
+        if (! $user) {
+            return false;
+        }
+
+        return $user->hasRole(Rbac::SUPERADMIN_PLATEFORME)
+            || $user->can(Rbac::WORKSPACE_SWITCH);
     }
 
     public function space(?User $user, ?Request $request = null): ?string

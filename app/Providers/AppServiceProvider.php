@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Support\Rbac;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +21,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Le role technique plateforme (exploitant du SaaS) court-circuite
+        // toutes les verifications d'autorisation applicatives.
+        Gate::before(function ($user, string $ability): ?bool {
+            return $user->hasRole(Rbac::SUPERADMIN_PLATEFORME) ? true : null;
+        });
     }
 }

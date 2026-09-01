@@ -17,15 +17,15 @@ use App\Models\ChurchService;
 use App\Models\Communication;
 use App\Models\Community;
 use App\Models\CounselingCase;
+use App\Models\Currency;
 use App\Models\DiscipleshipPath;
 use App\Models\EventRegistration;
-use App\Models\Family;
-use App\Models\Fund;
-use App\Models\FundMovement;
-use App\Models\Currency;
 use App\Models\ExchangeRate;
 use App\Models\Expense;
 use App\Models\FacilityBooking;
+use App\Models\Family;
+use App\Models\Fund;
+use App\Models\FundMovement;
 use App\Models\LiveStreamSession;
 use App\Models\MinistryGroup;
 use App\Models\NewConvert;
@@ -38,18 +38,17 @@ use App\Models\ResourceSale;
 use App\Models\SecurityIncident;
 use App\Models\SermonMedia;
 use App\Models\ServiceRequest;
+use App\Models\SolutionModule;
 use App\Models\Survey;
 use App\Models\Testimony;
-use App\Models\SolutionModule;
 use App\Models\TrainingCourse;
 use App\Models\User;
 use App\Models\VendorBill;
 use App\Models\Visitor;
 use App\Models\VolunteerAssignment;
+use App\Support\Rbac;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 class EreveSeeder extends Seeder
 {
@@ -82,17 +81,7 @@ class EreveSeeder extends Seeder
             PaymentMethod::updateOrCreate(['code' => $code], ['label' => $label, 'provider' => $provider, 'is_active' => true]);
         }
 
-        $permissions = ['communautes.crud', 'eglises.crud', 'membres.crud', 'utilisateurs.crud', 'comptabilite.crud', 'rapports.export', 'offline.sync'];
-        foreach ($permissions as $permission) {
-            Permission::findOrCreate($permission);
-        }
-
-        foreach (['SuperUser', 'Coordonateur', 'Secretaire General', 'Administrateur General'] as $roleName) {
-            Role::findOrCreate($roleName)->syncPermissions($permissions);
-        }
-        foreach (['SuperAdmin', 'Pasteur', 'Administrateur', 'Financier', 'Caissier', 'Responsable Service', 'Auditeur', 'Secretaire', 'Membre'] as $roleName) {
-            Role::findOrCreate($roleName)->syncPermissions($roleName === 'Membre' ? ['membres.crud'] : $permissions);
-        }
+        $this->call(RolePermissionSeeder::class);
 
         $community = Community::firstOrCreate([
             'authorization_number' => 'AUT-RDC-EREVE-001',
@@ -122,27 +111,54 @@ class EreveSeeder extends Seeder
             'phone' => '+243990000101',
         ]);
 
-        $user = User::firstOrCreate(['email' => 'admin@ereve.cd'], [
+        User::firstOrCreate(['email' => 'admin@ereve.cd'], [
             'name' => 'Administrateur eReve',
             'password' => Hash::make('password'),
             'member_id' => null,
             'church_id' => null,
             'community_id' => $community->id,
-            'level' => 'coordination',
+            'level' => Rbac::LEVEL_COORDINATION,
             'status' => 'actif',
-        ]);
-        $user->assignRole('SuperUser');
+        ])->syncRoles([Rbac::ADMINISTRATEUR]);
 
-        $churchAdmin = User::firstOrCreate(['email' => 'eglise.admin@ereve.cd'], [
-            'name' => 'SuperAdmin Eglise Mont Sion',
+        User::firstOrCreate(['email' => 'plateforme@ereve.cd'], [
+            'name' => 'SuperAdmin plateforme',
+            'password' => Hash::make('password'),
+            'member_id' => null,
+            'church_id' => null,
+            'community_id' => null,
+            'level' => Rbac::LEVEL_PLATFORM,
+            'status' => 'actif',
+        ])->syncRoles([Rbac::SUPERADMIN_PLATEFORME]);
+
+        foreach ([
+            'adminfin@ereve.cd' => ['AdminFin Mont Sion', Rbac::ADMIN_FIN],
+            'caissier@ereve.cd' => ['Caissier Mont Sion', Rbac::CAISSIER],
+            'auditeur@ereve.cd' => ['Auditeur Mont Sion', Rbac::AUDITEUR],
+            'secretaire@ereve.cd' => ['Secretaire Mont Sion', Rbac::SECRETAIRE],
+        ] as $email => [$name, $role]) {
+            User::firstOrCreate(['email' => $email], [
+                'name' => $name,
+                'password' => Hash::make('password'),
+                'member_id' => null,
+                'church_id' => $church->id,
+                'community_id' => $community->id,
+                'level' => Rbac::LEVEL_EGLISE,
+                'status' => 'actif',
+            ])->syncRoles([$role]);
+        }
+
+        // Compte operations retro-compatible (utilise par la suite de tests) :
+        // cumule les capacites financieres, secretariat et audit d'une eglise.
+        User::firstOrCreate(['email' => 'eglise.admin@ereve.cd'], [
+            'name' => 'Operations Mont Sion',
             'password' => Hash::make('password'),
             'member_id' => null,
             'church_id' => $church->id,
             'community_id' => $community->id,
-            'level' => 'eglise',
+            'level' => Rbac::LEVEL_EGLISE,
             'status' => 'actif',
-        ]);
-        $churchAdmin->assignRole('SuperAdmin');
+        ])->syncRoles([Rbac::ADMIN_FIN, Rbac::SECRETAIRE, Rbac::AUDITEUR]);
 
         ChurchService::firstOrCreate([
             'church_id' => $church->id,
