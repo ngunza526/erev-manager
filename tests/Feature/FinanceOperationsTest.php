@@ -6,11 +6,14 @@ use App\Models\ChartOfAccount;
 use App\Models\Church;
 use App\Models\Community;
 use App\Models\User;
+use App\Support\Rbac;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\AssignsRoles;
 use Tests\TestCase;
 
 class FinanceOperationsTest extends TestCase
 {
+    use AssignsRoles;
     use RefreshDatabase;
 
     public function test_paid_expense_creates_accounting_entry(): void
@@ -22,6 +25,7 @@ class FinanceOperationsTest extends TestCase
             'church_id' => $church->id,
             'community_id' => $church->community_id,
         ]);
+        $this->withRoles($user, Rbac::ADMIN_FIN);
         ChartOfAccount::create(['code' => '601', 'label' => 'Achats', 'class' => 6, 'normal_side' => 'debit']);
         ChartOfAccount::create(['code' => '511', 'label' => 'Caisse', 'class' => 5, 'normal_side' => 'debit']);
 
@@ -53,6 +57,7 @@ class FinanceOperationsTest extends TestCase
             'church_id' => $church->id,
             'community_id' => $church->community_id,
         ]);
+        $this->withRoles($user, Rbac::ADMIN_FIN);
         ChartOfAccount::create(['code' => '601', 'label' => 'Achats', 'class' => 6, 'normal_side' => 'debit']);
         ChartOfAccount::create(['code' => '511', 'label' => 'Caisse', 'class' => 5, 'normal_side' => 'debit']);
 

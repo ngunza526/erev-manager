@@ -8,13 +8,16 @@ use App\Models\Community;
 use App\Models\ExchangeRate;
 use App\Models\JournalEntryLine;
 use App\Models\User;
+use App\Support\Rbac;
 use Database\Seeders\EreveSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Tests\Concerns\AssignsRoles;
 use Tests\TestCase;
 
 class RdcSpecificationTest extends TestCase
 {
+    use AssignsRoles;
     use RefreshDatabase;
 
     public function test_seed_exposes_rdc_rate_payment_methods_and_complete_addresses(): void
@@ -41,6 +44,7 @@ class RdcSpecificationTest extends TestCase
             'church_id' => $church->id,
             'community_id' => $church->community_id,
         ]);
+        $this->withRoles($user, Rbac::ADMIN_FIN);
         ExchangeRate::create([
             'from_currency' => 'USD',
             'to_currency' => 'CDF',
@@ -59,9 +63,12 @@ class RdcSpecificationTest extends TestCase
             );
     }
 
-    public function test_community_and_church_crud_store_complete_rdc_addresses(): void
+    public function test_platform_and_admin_crud_store_complete_rdc_addresses(): void
     {
-        $user = User::factory()->create(['status' => 'actif', 'level' => 'coordination']);
+        // La creation de communautes est reservee au role plateforme ;
+        // l'enregistrement des eglises releve du role Administrateur.
+        $user = User::factory()->create(['status' => 'actif', 'level' => Rbac::LEVEL_PLATFORM]);
+        $this->withRoles($user, Rbac::SUPERADMIN_PLATEFORME);
 
         $this->actingAs($user)->post('/communautes', [
             'designation' => 'Communaute Adresse RDC',

@@ -19,7 +19,9 @@ class WorkspaceSeparationTest extends TestCase
     {
         [$communityUser] = $this->makeWorkspaceUsers();
 
-        $this->actingAs($communityUser)->get('/communautes')->assertOk();
+        // Le provisioning de communautes est reserve au role plateforme.
+        $this->actingAs($communityUser)->get('/communautes')->assertForbidden();
+
         $this->actingAs($communityUser)->get('/eglises')->assertOk();
         $this->actingAs($communityUser)->get('/utilisateurs')->assertOk();
         $this->actingAs($communityUser)->get('/roles-permissions')->assertOk();
@@ -39,7 +41,6 @@ class WorkspaceSeparationTest extends TestCase
         $this->actingAs($churchUser)->get('/budgets')->assertOk();
         $this->actingAs($churchUser)->get('/communications')->assertOk();
 
-        $this->actingAs($churchUser)->get('/communautes')->assertForbidden();
         $this->actingAs($churchUser)->get('/eglises')->assertForbidden();
         $this->actingAs($churchUser)->get('/utilisateurs')->assertForbidden();
         $this->actingAs($churchUser)->get('/roles-permissions')->assertForbidden();
@@ -68,45 +69,45 @@ class WorkspaceSeparationTest extends TestCase
             );
     }
 
-    public function test_community_user_can_assign_superadmin_to_a_church(): void
+    public function test_administrateur_can_create_church_user_with_role(): void
     {
         [$communityUser, , $church] = $this->makeWorkspaceUsers();
 
         $this->actingAs($communityUser)
             ->post('/utilisateurs', [
-                'name' => 'Super Admin Eglise',
-                'email' => 'superadmin-eglise@example.cd',
+                'name' => 'Financier Eglise',
+                'email' => 'financier-eglise@example.cd',
                 'password' => 'password',
                 'level' => 'eglise',
                 'church_id' => $church->id,
-                'role' => 'SuperAdmin',
+                'role' => Rbac::ADMIN_FIN,
             ])
             ->assertRedirect();
 
-        $user = User::where('email', 'superadmin-eglise@example.cd')->firstOrFail();
+        $user = User::where('email', 'financier-eglise@example.cd')->firstOrFail();
 
         $this->assertSame('eglise', $user->level);
         $this->assertSame($church->id, $user->church_id);
-        $this->assertTrue($user->hasRole('SuperAdmin'));
+        $this->assertTrue($user->hasRole(Rbac::ADMIN_FIN));
     }
 
-    public function test_superadmin_can_switch_between_community_and_church_contexts(): void
+    public function test_administrateur_can_switch_between_community_and_church_contexts(): void
     {
-        [, , $church, $otherChurch, $superAdmin] = $this->makeWorkspaceUsers();
+        [, , $church, $otherChurch, $switcher] = $this->makeWorkspaceUsers();
 
-        $this->actingAs($superAdmin)->get('/membres')->assertOk();
-        $this->actingAs($superAdmin)->get('/communautes')->assertForbidden();
+        $this->actingAs($switcher)->get('/membres')->assertOk();
+        $this->actingAs($switcher)->get('/eglises')->assertForbidden();
 
-        $this->actingAs($superAdmin)
+        $this->actingAs($switcher)
             ->post('/workspace/switch', [
                 'space' => 'communaute',
                 'community_id' => $church->community_id,
             ])
             ->assertRedirect(route('dashboard'));
 
-        $this->actingAs($superAdmin)->get('/communautes')->assertOk();
-        $this->actingAs($superAdmin)->get('/membres')->assertForbidden();
-        $this->actingAs($superAdmin)
+        $this->actingAs($switcher)->get('/eglises')->assertOk();
+        $this->actingAs($switcher)->get('/membres')->assertForbidden();
+        $this->actingAs($switcher)
             ->get('/')
             ->assertOk()
             ->assertInertia(fn ($page) => $page
@@ -114,14 +115,14 @@ class WorkspaceSeparationTest extends TestCase
                 ->where('auth.space', 'communaute')
             );
 
-        $this->actingAs($superAdmin)
+        $this->actingAs($switcher)
             ->post('/workspace/switch', [
                 'space' => 'eglise',
                 'church_id' => $otherChurch->id,
             ])
             ->assertRedirect(route('dashboard'));
 
-        $this->actingAs($superAdmin)
+        $this->actingAs($switcher)
             ->get('/membres')
             ->assertOk()
             ->assertInertia(fn ($page) => $page
@@ -132,7 +133,7 @@ class WorkspaceSeparationTest extends TestCase
             );
     }
 
-    public function test_non_superadmin_cannot_switch_workspace_context(): void
+    public function test_non_switcher_cannot_switch_workspace_context(): void
     {
         [, $churchUser, $church] = $this->makeWorkspaceUsers();
 
@@ -182,6 +183,7 @@ class WorkspaceSeparationTest extends TestCase
             'level' => 'coordination',
             'status' => 'actif',
         ]);
+        $communityUser->assignRole(Rbac::ADMINISTRATEUR);
 
         $churchUser = User::create([
             'name' => 'User Eglise',
@@ -192,18 +194,21 @@ class WorkspaceSeparationTest extends TestCase
             'level' => 'eglise',
             'status' => 'actif',
         ]);
+        $churchUser->assignRole([Rbac::ADMIN_FIN, Rbac::SECRETAIRE]);
 
-        $superAdmin = User::create([
-            'name' => 'SuperAdmin Switch',
-            'email' => 'superadmin-switch@example.cd',
+        // Niveau eglise : espace par defaut "eglise" ; le role Administrateur
+        // (permission workspace.switch) autorise la bascule vers "communaute".
+        $switcher = User::create([
+            'name' => 'Administrateur Switch',
+            'email' => 'switcher-workspace@example.cd',
             'password' => Hash::make('password'),
             'community_id' => $community->id,
             'church_id' => $church->id,
             'level' => 'eglise',
             'status' => 'actif',
         ]);
-        $superAdmin->assignRole(Rbac::ADMINISTRATEUR);
+        $switcher->assignRole([Rbac::ADMINISTRATEUR, Rbac::ADMIN_FIN, Rbac::SECRETAIRE]);
 
-        return [$communityUser, $churchUser, $church, $otherChurch, $superAdmin];
+        return [$communityUser, $churchUser, $church, $otherChurch, $switcher];
     }
 }

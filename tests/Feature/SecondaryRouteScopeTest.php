@@ -10,11 +10,14 @@ use App\Models\Member;
 use App\Models\PayrollRun;
 use App\Models\User;
 use App\Models\VendorBill;
+use App\Support\Rbac;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\AssignsRoles;
 use Tests\TestCase;
 
 class SecondaryRouteScopeTest extends TestCase
 {
+    use AssignsRoles;
     use RefreshDatabase;
 
     public function test_member_status_action_rejects_member_outside_user_scope(): void
@@ -182,6 +185,7 @@ class SecondaryRouteScopeTest extends TestCase
             'church_id' => $ownChurch->id,
             'community_id' => $community->id,
         ]);
+        $this->withRoles($user, Rbac::ADMIN_FIN, Rbac::SECRETAIRE);
 
         return [$user, $ownChurch, $otherChurch];
     }

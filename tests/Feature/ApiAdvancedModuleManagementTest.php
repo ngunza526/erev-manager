@@ -6,7 +6,6 @@ use App\Models\Church;
 use App\Models\Community;
 use App\Models\Fund;
 use App\Models\JournalEntry;
-use App\Models\ResourceSale;
 use App\Models\User;
 use Database\Seeders\EreveSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;

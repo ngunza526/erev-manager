@@ -3,17 +3,17 @@
 namespace Tests\Feature;
 
 use App\Models\Church;
-use App\Models\ChurchEvent;
-use App\Models\ChurchService;
 use App\Models\Community;
-use App\Models\MinistryGroup;
 use App\Models\User;
+use App\Support\Rbac;
 use Database\Seeders\EreveSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\AssignsRoles;
 use Tests\TestCase;
 
 class MinistryOperationsTest extends TestCase
 {
+    use AssignsRoles;
     use RefreshDatabase;
 
     public function test_seed_creates_church_central_style_ministry_operations(): void
@@ -36,6 +36,7 @@ class MinistryOperationsTest extends TestCase
             'church_id' => $church->id,
             'community_id' => $church->community_id,
         ]);
+        $this->withRoles($user, Rbac::SECRETAIRE);
 
         $this->actingAs($user)->post('/services', [
             'church_id' => $church->id,

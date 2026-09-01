@@ -3,18 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MemberStatus;
+use App\Models\Church;
 use App\Models\Member;
 use App\Models\User;
-use App\Models\Church;
 use App\Services\AccessScope;
 use App\Services\WorkspaceContext;
+use App\Support\Rbac;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
-use Spatie\Permission\Models\Role;
 
 class UserManagementController extends Controller
 {
@@ -42,8 +42,8 @@ class UserManagementController extends Controller
             'churches' => $scope->churches($request->user()),
             'communities' => $scope->communities($request->user()),
             'roles' => [
-                'coordination' => ['SuperUser', 'Coordonateur', 'Secretaire General', 'Administrateur General'],
-                'eglise' => ['SuperAdmin', 'Pasteur', 'Administrateur', 'Financier', 'Caissier', 'Responsable Service', 'Auditeur', 'Secretaire', 'Membre'],
+                'coordination' => $this->rolesForLevel('coordination'),
+                'eglise' => $this->rolesForLevel('eglise'),
             ],
         ]);
     }
@@ -95,17 +95,21 @@ class UserManagementController extends Controller
             'status' => 'actif',
         ]);
 
-        Role::findOrCreate($data['role']);
-        $user->assignRole($data['role']);
+        $user->syncRoles([$data['role']]);
 
         return back()->with('success', 'Utilisateur cree avec role et OTP requis.');
     }
 
+    /**
+     * Roles attribuables via l'interface, par niveau de compte.
+     * Le role technique "SuperAdmin plateforme" n'est jamais propose ici.
+     */
     private function rolesForLevel(string $level): array
     {
-        return [
-            'coordination' => ['SuperUser', 'Coordonateur', 'Secretaire General', 'Administrateur General'],
-            'eglise' => ['SuperAdmin', 'Pasteur', 'Administrateur', 'Financier', 'Caissier', 'Responsable Service', 'Auditeur', 'Secretaire', 'Membre'],
-        ][$level] ?? [];
+        return match ($level) {
+            'coordination' => [Rbac::ADMINISTRATEUR],
+            'eglise' => [Rbac::ADMIN_FIN, Rbac::CAISSIER, Rbac::AUDITEUR, Rbac::SECRETAIRE],
+            default => [],
+        };
     }
 }

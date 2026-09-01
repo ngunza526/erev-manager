@@ -7,12 +7,15 @@ use App\Models\Church;
 use App\Models\Community;
 use App\Models\Member;
 use App\Models\User;
+use App\Support\Rbac;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Tests\Concerns\AssignsRoles;
 use Tests\TestCase;
 
 class AccessScopeTest extends TestCase
 {
+    use AssignsRoles;
     use RefreshDatabase;
 
     public function test_church_user_only_sees_members_and_churches_in_own_scope(): void
@@ -94,6 +97,7 @@ class AccessScopeTest extends TestCase
             'level' => 'eglise',
             'status' => 'actif',
         ]);
+        $this->withRoles($user, Rbac::SECRETAIRE);
 
         return [$user, $ownChurch, $otherChurch];
     }

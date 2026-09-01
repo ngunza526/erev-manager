@@ -10,12 +10,15 @@ use App\Models\Member;
 use App\Models\OfflineSyncBatch;
 use App\Models\User;
 use App\Models\Visitor;
+use App\Support\Rbac;
 use Database\Seeders\EreveSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\AssignsRoles;
 use Tests\TestCase;
 
 class OfflineSyncTest extends TestCase
 {
+    use AssignsRoles;
     use RefreshDatabase;
 
     public function test_web_offline_sync_processes_visitors_donations_events_and_manual_entries_idempotently(): void
@@ -109,6 +112,7 @@ class OfflineSyncTest extends TestCase
             'community_id' => $otherChurch->community_id,
             'status' => 'actif',
         ]);
+        $this->withRoles($otherUser, Rbac::CAISSIER);
         $churches = collect([
             [$baseChurch, User::where('email', 'eglise.admin@ereve.cd')->firstOrFail()],
             [$otherChurch, $otherUser],
@@ -152,6 +156,7 @@ class OfflineSyncTest extends TestCase
             'church_id' => $ownChurch->id,
             'community_id' => $ownChurch->community_id,
         ]);
+        $this->withRoles($user, Rbac::CAISSIER);
 
         OfflineSyncBatch::create([
             'church_id' => $otherChurch->id,

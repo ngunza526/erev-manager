@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Church;
 use App\Models\ChartOfAccount;
+use App\Models\Church;
 use App\Models\JournalEntry;
 use App\Models\Member;
 use App\Models\User;

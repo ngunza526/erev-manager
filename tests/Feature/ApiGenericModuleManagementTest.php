@@ -3,11 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Church;
-use App\Models\ChurchService;
-use App\Models\Community;
 use App\Models\Communication;
+use App\Models\Community;
 use App\Models\User;
-use App\Models\Visitor;
 use Database\Seeders\EreveSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;

@@ -7,9 +7,10 @@ defineProps({ title: String });
 const page = usePage();
 const pendingOffline = ref(0);
 
+// La creation de communautes (provisioning de locataires) est reservee au
+// role technique plateforme et n'apparait pas dans la navigation applicative.
 const communityPrimaryNav = [
   { key: 'dashboard', href: '/', label: 'Dashboard', icon: 'D' },
-  { key: 'communautes', href: '/communautes', label: 'Communautes', icon: 'C' },
   { key: 'eglises', href: '/eglises', label: 'Eglises', icon: 'E' },
   { key: 'utilisateurs', href: '/utilisateurs', label: 'Utilisateurs', icon: 'U' },
   { key: 'roles', href: '/roles-permissions', label: 'Roles', icon: 'R' },
@@ -28,7 +29,6 @@ const communityNavSections = [
     key: 'organisation',
     label: 'Organisation',
     items: [
-      { href: '/communautes', label: 'Communautes' },
       { href: '/eglises', label: 'Eglises' },
       { href: '/utilisateurs', label: 'Utilisateurs' },
       { href: '/roles-permissions', label: 'Roles et permissions' },

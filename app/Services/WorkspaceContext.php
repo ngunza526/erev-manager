@@ -35,7 +35,9 @@ class WorkspaceContext
             }
         }
 
-        return $user->level === 'coordination' ? 'communaute' : 'eglise';
+        return in_array($user->level, [Rbac::LEVEL_COORDINATION, Rbac::LEVEL_PLATFORM], true)
+            ? 'communaute'
+            : 'eglise';
     }
 
     public function spaceLabel(?User $user, ?Request $request = null): ?string
@@ -94,6 +96,11 @@ class WorkspaceContext
             return [];
         }
 
+        // Le role technique plateforme opere sans restriction de perimetre.
+        if ($user->level === Rbac::LEVEL_PLATFORM) {
+            return null;
+        }
+
         if ($this->canSwitch($user)) {
             if ($this->space($user, $request) === 'communaute') {
                 return $this->switchableChurchIds($user);
@@ -119,6 +126,10 @@ class WorkspaceContext
     {
         if (! $user) {
             return [];
+        }
+
+        if ($user->level === Rbac::LEVEL_PLATFORM) {
+            return null;
         }
 
         $communityId = $this->communityId($user, $request);
