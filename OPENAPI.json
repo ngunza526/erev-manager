@@ -1,0 +1,328 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "eReve Church API",
+    "version": "1.0.0",
+    "description": "API REST Sanctum pour le SaaS eReve Church RDC: gestion eglise, modules fonctionnels, comptabilite, offline et media."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8088",
+      "description": "Environnement local"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "sanctumBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Sanctum"
+      }
+    },
+    "schemas": {
+      "JsonData": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "ValidationError": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "Ok": {
+        "description": "Operation reussie",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/JsonData" }
+          }
+        }
+      },
+      "Created": {
+        "description": "Ressource creee",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/JsonData" }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Token absent ou invalide"
+      },
+      "ValidationError": {
+        "description": "Erreur de validation ou de perimetre",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ValidationError" }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "member": { "name": "member", "in": "path", "required": true, "schema": { "type": "integer" } },
+      "service": { "name": "service", "in": "path", "required": true, "schema": { "type": "integer" } },
+      "group": { "name": "group", "in": "path", "required": true, "schema": { "type": "integer" } },
+      "event": { "name": "event", "in": "path", "required": true, "schema": { "type": "integer" } },
+      "budget": { "name": "budget", "in": "path", "required": true, "schema": { "type": "integer" } },
+      "expense": { "name": "expense", "in": "path", "required": true, "schema": { "type": "integer" } },
+      "upload": { "name": "upload", "in": "path", "required": true, "schema": { "type": "integer" } },
+      "module": { "name": "module", "in": "path", "required": true, "schema": { "type": "string" } },
+      "family": { "name": "family", "in": "path", "required": true, "schema": { "type": "string", "enum": ["pastoral", "administration"] } },
+      "id": { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+    }
+  },
+  "security": [
+    {
+      "sanctumBearer": []
+    }
+  ],
+  "paths": {
+    "/api/auth/token": {
+      "post": {
+        "summary": "Creer un token API Sanctum",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "email": "admin@ereve.cd",
+                "password": "password",
+                "device_name": "mobile-lubumbashi-001"
+              }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "Revoquer le token courant",
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "summary": "Profil utilisateur courant",
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+      }
+    },
+    "/api/churches": {
+      "get": {
+        "summary": "Eglises visibles dans le perimetre",
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/members": {
+      "get": {
+        "summary": "Lister les membres scopes",
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      },
+      "post": {
+        "summary": "Creer un membre",
+        "requestBody": { "required": true, "content": { "application/json": { "example": { "church_id": 1, "last_name": "Kabila", "middle_name": "Ilunga", "first_name": "Grace", "sex": "Feminin", "birth_date": "1996-04-12", "birth_place": "Lubumbashi", "profession": "Enseignante", "marital_status": "Celibataire", "status": "sympathisant" } } } },
+        "responses": { "201": { "$ref": "#/components/responses/Created" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/members/{member}": {
+      "put": {
+        "summary": "Mettre a jour un membre",
+        "parameters": [{ "$ref": "#/components/parameters/member" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/services": {
+      "post": {
+        "summary": "Creer un culte/service",
+        "requestBody": { "required": true, "content": { "application/json": { "example": { "church_id": 1, "title": "Culte dominical", "service_type": "culte", "starts_at": "2026-07-05 09:00:00" } } } },
+        "responses": { "201": { "$ref": "#/components/responses/Created" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/services/{service}": {
+      "put": {
+        "summary": "Mettre a jour un culte/service",
+        "parameters": [{ "$ref": "#/components/parameters/service" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/groups": {
+      "post": {
+        "summary": "Creer un groupe ou ministere",
+        "responses": { "201": { "$ref": "#/components/responses/Created" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/groups/{group}": {
+      "put": {
+        "summary": "Mettre a jour un groupe",
+        "parameters": [{ "$ref": "#/components/parameters/group" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/events": {
+      "post": {
+        "summary": "Creer un evenement",
+        "responses": { "201": { "$ref": "#/components/responses/Created" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/events/{event}": {
+      "put": {
+        "summary": "Mettre a jour un evenement",
+        "parameters": [{ "$ref": "#/components/parameters/event" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/budgets": {
+      "post": {
+        "summary": "Creer un budget",
+        "responses": { "201": { "$ref": "#/components/responses/Created" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/budgets/{budget}": {
+      "put": {
+        "summary": "Mettre a jour un budget",
+        "parameters": [{ "$ref": "#/components/parameters/budget" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/expenses": {
+      "post": {
+        "summary": "Creer une depense avec ecriture seulement si payee",
+        "requestBody": { "required": true, "content": { "application/json": { "example": { "church_id": 1, "description": "Achat brochures evangelisation", "category": "activites spirituelles", "currency": "USD", "amount": 120, "exchange_rate": 2850, "expense_date": "2026-07-04", "payment_method": "card", "status": "paid" } } } },
+        "responses": { "201": { "$ref": "#/components/responses/Created" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/expenses/{expense}": {
+      "put": {
+        "summary": "Mettre a jour une depense",
+        "parameters": [{ "$ref": "#/components/parameters/expense" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/{family}/{module}": {
+      "get": {
+        "summary": "Lister un module pastoral ou administratif",
+        "parameters": [{ "$ref": "#/components/parameters/family" }, { "$ref": "#/components/parameters/module" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "404": { "description": "Module inconnu" } }
+      },
+      "post": {
+        "summary": "Creer une entree de module pastoral ou administratif",
+        "parameters": [{ "$ref": "#/components/parameters/family" }, { "$ref": "#/components/parameters/module" }],
+        "responses": { "201": { "$ref": "#/components/responses/Created" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/{family}/{module}/{id}": {
+      "put": {
+        "summary": "Mettre a jour une entree de module pastoral ou administratif",
+        "parameters": [{ "$ref": "#/components/parameters/family" }, { "$ref": "#/components/parameters/module" }, { "$ref": "#/components/parameters/id" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/advanced/{module}": {
+      "get": {
+        "summary": "Lister un module avance",
+        "parameters": [{ "$ref": "#/components/parameters/module" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "404": { "description": "Module inconnu" } }
+      },
+      "post": {
+        "summary": "Creer une entree de module avance",
+        "parameters": [{ "$ref": "#/components/parameters/module" }],
+        "responses": { "201": { "$ref": "#/components/responses/Created" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/advanced/{module}/{id}": {
+      "put": {
+        "summary": "Mettre a jour une entree de module avance",
+        "parameters": [{ "$ref": "#/components/parameters/module" }, { "$ref": "#/components/parameters/id" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/accounting/entries": {
+      "get": {
+        "summary": "Lister les ecritures comptables visibles",
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/solutions": {
+      "get": {
+        "summary": "Catalogue des modules fonctionnels",
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/media/offline-manifest": {
+      "get": {
+        "summary": "Manifeste des medias offline autorises",
+        "responses": { "200": { "$ref": "#/components/responses/Ok" } }
+      }
+    },
+    "/api/media/uploads": {
+      "post": {
+        "summary": "Creer une session d'upload media reprenable",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "church_id": 1,
+                "title": "Predication offline",
+                "media_type": "audio",
+                "category": "sermon",
+                "original_filename": "predication.mp3",
+                "total_chunks": 24
+              }
+            }
+          }
+        },
+        "responses": { "201": { "$ref": "#/components/responses/Created" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/media/uploads/{upload}": {
+      "get": {
+        "summary": "Lire l'etat d'une session d'upload media",
+        "parameters": [{ "$ref": "#/components/parameters/upload" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/media/uploads/{upload}/chunks": {
+      "post": {
+        "summary": "Envoyer ou remplacer un morceau d'upload media",
+        "parameters": [{ "$ref": "#/components/parameters/upload" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "chunk_index": 0,
+                "content_base64": "Qm9uam91ciBtb25kZQ=="
+              }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/media/uploads/{upload}/complete": {
+      "post": {
+        "summary": "Assembler les morceaux et publier le media",
+        "parameters": [{ "$ref": "#/components/parameters/upload" }],
+        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/api/offline/sync": {
+      "post": {
+        "summary": "Synchroniser un lot offline",
+        "requestBody": { "required": true, "content": { "application/json": { "example": { "device_id": "rdc-tablette-001", "client_batch_id": "batch-lubumbashi-20260704-001", "church_id": 1, "records": [] } } } },
+        "responses": { "201": { "$ref": "#/components/responses/Created" }, "200": { "$ref": "#/components/responses/Ok" }, "422": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    }
+  }
+}

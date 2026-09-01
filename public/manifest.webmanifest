@@ -1,0 +1,10 @@
+{
+  "name": "eReve Church SaaS",
+  "short_name": "eReve",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbfcfa",
+  "theme_color": "#24443a",
+  "description": "SaaS mobile-first pour la gestion des eglises en RDC.",
+  "icons": []
+}
