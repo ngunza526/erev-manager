@@ -6,13 +6,16 @@ use App\Models\Church;
 use App\Models\Community;
 use App\Models\MediaUploadSession;
 use App\Models\User;
+use App\Support\Rbac;
 use Database\Seeders\EreveSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\AssignsRoles;
 use Tests\TestCase;
 
 class MediaUploadApiTest extends TestCase
 {
+    use AssignsRoles;
     use RefreshDatabase;
 
     public function test_sanctum_user_can_resume_and_complete_chunked_media_upload(): void
@@ -22,7 +25,7 @@ class MediaUploadApiTest extends TestCase
 
         $this->seed(EreveSeeder::class);
 
-        $user = User::where('email', 'admin@ereve.cd')->firstOrFail();
+        $user = User::where('email', 'eglise.admin@ereve.cd')->firstOrFail();
         $church = Church::firstOrFail();
         $token = $user->createToken('mobile-media')->plainTextToken;
 
@@ -155,6 +158,8 @@ class MediaUploadApiTest extends TestCase
             'level' => 'eglise',
             'status' => 'actif',
         ]);
+
+        $this->withRoles($user, Rbac::SECRETAIRE);
 
         return [$user, $ownChurch, $otherChurch];
     }

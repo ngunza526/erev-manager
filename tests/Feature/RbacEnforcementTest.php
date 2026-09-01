@@ -142,4 +142,43 @@ class RbacEnforcementTest extends TestCase
         $platform = $this->user(Rbac::LEVEL_PLATFORM, Rbac::SUPERADMIN_PLATEFORME);
         $this->actingAs($platform)->get('/communautes')->assertOk();
     }
+
+    /** Bascule de jeton : purge le cache d'utilisateur des guards entre deux appels. */
+    private function apiAs(string $token): self
+    {
+        $this->app['auth']->forgetGuards();
+
+        return $this->withToken($token);
+    }
+
+    public function test_api_denies_token_without_module_permission(): void
+    {
+        $auditeur = $this->user(Rbac::LEVEL_EGLISE, Rbac::AUDITEUR)->createToken('t')->plainTextToken;
+
+        $this->apiAs($auditeur)->getJson('/api/members')->assertForbidden();
+        $this->apiAs($auditeur)->postJson('/api/services', [])->assertForbidden();
+        $this->apiAs($auditeur)->postJson('/api/advanced/paie', [])->assertForbidden();
+        // La lecture du journal comptable reste autorisee (reports.view).
+        $this->apiAs($auditeur)->getJson('/api/accounting/entries')->assertOk();
+    }
+
+    public function test_api_allows_token_with_module_permission(): void
+    {
+        $secretaire = $this->user(Rbac::LEVEL_EGLISE, Rbac::SECRETAIRE)->createToken('t')->plainTextToken;
+
+        $this->apiAs($secretaire)->getJson('/api/members')->assertOk();
+        // Franchit la garde puis echoue sur la validation.
+        $this->apiAs($secretaire)->postJson('/api/services', [])->assertUnprocessable();
+    }
+
+    public function test_api_advanced_module_permission_is_enforced_per_module(): void
+    {
+        $secretaire = $this->user(Rbac::LEVEL_EGLISE, Rbac::SECRETAIRE)->createToken('t')->plainTextToken;
+        $adminFin = $this->user(Rbac::LEVEL_EGLISE, Rbac::ADMIN_FIN)->createToken('t')->plainTextToken;
+
+        // Le Secretaire ne peut pas ecrire dans un module avance financier.
+        $this->apiAs($secretaire)->postJson('/api/advanced/paie', [])->assertForbidden();
+        // L'AdminFin le peut (echoue ensuite sur la validation).
+        $this->apiAs($adminFin)->postJson('/api/advanced/paie', [])->assertUnprocessable();
+    }
 }

@@ -6,20 +6,23 @@ use App\Models\Church;
 use App\Models\Communication;
 use App\Models\Community;
 use App\Models\User;
+use App\Support\Rbac;
 use Database\Seeders\EreveSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Tests\Concerns\AssignsRoles;
 use Tests\TestCase;
 
 class ApiGenericModuleManagementTest extends TestCase
 {
+    use AssignsRoles;
     use RefreshDatabase;
 
     public function test_api_can_manage_pastoral_and_administration_modules(): void
     {
         $this->seed(EreveSeeder::class);
 
-        $user = User::where('email', 'admin@ereve.cd')->firstOrFail();
+        $user = User::where('email', 'eglise.admin@ereve.cd')->firstOrFail();
         $church = Church::firstOrFail();
         $token = $user->createToken('generic-modules')->plainTextToken;
 
@@ -117,6 +120,8 @@ class ApiGenericModuleManagementTest extends TestCase
             'level' => 'eglise',
             'status' => 'actif',
         ]);
+
+        $this->withRoles($user, Rbac::SECRETAIRE);
 
         return [$user, $ownChurch, $otherChurch];
     }

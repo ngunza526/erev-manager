@@ -26,30 +26,6 @@ use App\Http\Controllers\WorkspaceContextController;
 use App\Support\Rbac;
 use Illuminate\Support\Facades\Route;
 
-/**
- * Permission requise par module "avance" (routes generees en boucle).
- * Modules financiers -> accounting.post ; rapprochement -> bank.reconcile ;
- * counseling (sensible) -> members.manage ; le reste -> services.manage.
- */
-$advancedModulePermissions = [
-    'boutique-ressources' => Rbac::ACCOUNTING_POST,
-    'fournisseurs' => Rbac::ACCOUNTING_POST,
-    'paie' => Rbac::ACCOUNTING_POST,
-    'rapprochements' => Rbac::BANK_RECONCILE,
-    'reversements' => Rbac::ACCOUNTING_POST,
-    'counseling' => Rbac::MEMBERS_MANAGE,
-    'evangelisation' => Rbac::SERVICES_MANAGE,
-    'qr-publics' => Rbac::SERVICES_MANAGE,
-    'live-studio' => Rbac::SERVICES_MANAGE,
-    'outils-ia' => Rbac::SERVICES_MANAGE,
-    'familles' => Rbac::SERVICES_MANAGE,
-    'discipolat' => Rbac::SERVICES_MANAGE,
-    'mediatheque' => Rbac::SERVICES_MANAGE,
-    'fonds-dedies' => Rbac::ACCOUNTING_POST,
-    'mouvements-fonds' => Rbac::ACCOUNTING_POST,
-    'inscriptions-evenements' => Rbac::ACCOUNTING_POST,
-];
-
 Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
@@ -64,7 +40,7 @@ Route::post('public/eglises/{church}/visiteur', [PublicFlowController::class, 's
 Route::get('public/evenements/{event}', [PublicFlowController::class, 'event'])->name('public.event');
 Route::post('public/evenements/{event}', [PublicFlowController::class, 'storeEvent'])->name('public.event.store');
 
-Route::middleware('auth')->group(function () use ($advancedModulePermissions) {
+Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::post('workspace/switch', [WorkspaceContextController::class, 'update'])->name('workspace.switch');
 
@@ -90,7 +66,7 @@ Route::middleware('auth')->group(function () use ($advancedModulePermissions) {
         });
     });
 
-    Route::middleware('workspace:eglise')->group(function () use ($advancedModulePermissions) {
+    Route::middleware('workspace:eglise')->group(function () {
         Route::post('offline/sync', [OfflineSyncController::class, 'store'])
             ->middleware('permission:'.Rbac::OFFLINE_SYNC)
             ->name('offline.sync');
@@ -163,7 +139,7 @@ Route::middleware('auth')->group(function () use ($advancedModulePermissions) {
         });
 
         foreach (AdvancedChurchModuleController::modules() as $module) {
-            $permission = $advancedModulePermissions[$module] ?? Rbac::SERVICES_MANAGE;
+            $permission = AdvancedChurchModuleController::permissionFor($module);
             Route::get($module, [AdvancedChurchModuleController::class, 'index'])
                 ->defaults('module', $module)
                 ->middleware('permission:'.$permission)

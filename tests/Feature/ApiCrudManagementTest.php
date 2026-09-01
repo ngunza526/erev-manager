@@ -9,20 +9,23 @@ use App\Models\ChurchService;
 use App\Models\Community;
 use App\Models\JournalEntry;
 use App\Models\User;
+use App\Support\Rbac;
 use Database\Seeders\EreveSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Tests\Concerns\AssignsRoles;
 use Tests\TestCase;
 
 class ApiCrudManagementTest extends TestCase
 {
+    use AssignsRoles;
     use RefreshDatabase;
 
     public function test_sanctum_api_can_create_and_update_core_church_modules(): void
     {
         $this->seed(EreveSeeder::class);
 
-        $user = User::where('email', 'admin@ereve.cd')->firstOrFail();
+        $user = User::where('email', 'eglise.admin@ereve.cd')->firstOrFail();
         $church = Church::firstOrFail();
         $token = $user->createToken('crud-client')->plainTextToken;
 
@@ -82,7 +85,7 @@ class ApiCrudManagementTest extends TestCase
     {
         $this->seed(EreveSeeder::class);
 
-        $user = User::where('email', 'admin@ereve.cd')->firstOrFail();
+        $user = User::where('email', 'eglise.admin@ereve.cd')->firstOrFail();
         $church = Church::firstOrFail();
         $budget = Budget::firstOrFail();
         $token = $user->createToken('expense-client')->plainTextToken;
@@ -156,6 +159,8 @@ class ApiCrudManagementTest extends TestCase
             'level' => 'eglise',
             'status' => 'actif',
         ]);
+
+        $this->withRoles($user, Rbac::SECRETAIRE);
 
         return [$user, $ownChurch, $otherChurch];
     }

@@ -4,11 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\AiToolRequest;
 use App\Models\BankReconciliation;
-use App\Models\Church;
 use App\Models\ChurchEvent;
+use App\Models\ChurchMediaItem;
 use App\Models\ChurchPayout;
 use App\Models\CounselingCase;
-use App\Models\ChurchMediaItem;
 use App\Models\DiscipleshipPath;
 use App\Models\EventRegistration;
 use App\Models\Family;
@@ -20,8 +19,9 @@ use App\Models\PayrollRun;
 use App\Models\PublicQrCode;
 use App\Models\ResourceSale;
 use App\Models\VendorBill;
-use App\Services\Accounting\AccountingService;
 use App\Services\AccessScope;
+use App\Services\Accounting\AccountingService;
+use App\Support\Rbac;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -508,9 +508,39 @@ class AdvancedChurchModuleController extends Controller
         ],
     ];
 
+    /**
+     * Permission requise par module avance. Modules financiers -> accounting.post ;
+     * rapprochement -> bank.reconcile ; counseling (sensible) -> members.manage ;
+     * le reste -> services.manage. Source unique consommee par les routes web
+     * et par le controleur API.
+     */
+    public const MODULE_PERMISSIONS = [
+        'boutique-ressources' => Rbac::ACCOUNTING_POST,
+        'fournisseurs' => Rbac::ACCOUNTING_POST,
+        'paie' => Rbac::ACCOUNTING_POST,
+        'rapprochements' => Rbac::BANK_RECONCILE,
+        'reversements' => Rbac::ACCOUNTING_POST,
+        'counseling' => Rbac::MEMBERS_MANAGE,
+        'evangelisation' => Rbac::SERVICES_MANAGE,
+        'qr-publics' => Rbac::SERVICES_MANAGE,
+        'live-studio' => Rbac::SERVICES_MANAGE,
+        'outils-ia' => Rbac::SERVICES_MANAGE,
+        'familles' => Rbac::SERVICES_MANAGE,
+        'discipolat' => Rbac::SERVICES_MANAGE,
+        'mediatheque' => Rbac::SERVICES_MANAGE,
+        'fonds-dedies' => Rbac::ACCOUNTING_POST,
+        'mouvements-fonds' => Rbac::ACCOUNTING_POST,
+        'inscriptions-evenements' => Rbac::ACCOUNTING_POST,
+    ];
+
     public static function modules(): array
     {
         return array_keys(self::MODULES);
+    }
+
+    public static function permissionFor(string $module): string
+    {
+        return self::MODULE_PERMISSIONS[$module] ?? Rbac::SERVICES_MANAGE;
     }
 
     public function index(Request $request, AccessScope $scope, string $module): Response

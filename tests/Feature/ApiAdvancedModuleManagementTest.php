@@ -7,20 +7,23 @@ use App\Models\Community;
 use App\Models\Fund;
 use App\Models\JournalEntry;
 use App\Models\User;
+use App\Support\Rbac;
 use Database\Seeders\EreveSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Tests\Concerns\AssignsRoles;
 use Tests\TestCase;
 
 class ApiAdvancedModuleManagementTest extends TestCase
 {
+    use AssignsRoles;
     use RefreshDatabase;
 
     public function test_api_advanced_resource_sale_creates_revenue_entry(): void
     {
         $this->seed(EreveSeeder::class);
 
-        $user = User::where('email', 'admin@ereve.cd')->firstOrFail();
+        $user = User::where('email', 'eglise.admin@ereve.cd')->firstOrFail();
         $church = Church::firstOrFail();
         $token = $user->createToken('advanced-resource')->plainTextToken;
         $before = JournalEntry::count();
@@ -72,7 +75,7 @@ class ApiAdvancedModuleManagementTest extends TestCase
     {
         $this->seed(EreveSeeder::class);
 
-        $user = User::where('email', 'admin@ereve.cd')->firstOrFail();
+        $user = User::where('email', 'eglise.admin@ereve.cd')->firstOrFail();
         $church = Church::firstOrFail();
         $fund = Fund::firstOrFail();
         $token = $user->createToken('advanced-fund')->plainTextToken;
@@ -160,6 +163,8 @@ class ApiAdvancedModuleManagementTest extends TestCase
             'level' => 'eglise',
             'status' => 'actif',
         ]);
+
+        $this->withRoles($user, Rbac::ADMIN_FIN);
 
         return [$user, $ownChurch, $otherChurch];
     }

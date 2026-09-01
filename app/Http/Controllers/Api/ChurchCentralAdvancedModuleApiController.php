@@ -6,8 +6,8 @@ use App\Http\Controllers\AdvancedChurchModuleController;
 use App\Http\Controllers\Controller;
 use App\Models\ChurchEvent;
 use App\Models\Fund;
-use App\Services\Accounting\AccountingService;
 use App\Services\AccessScope;
+use App\Services\Accounting\AccountingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -16,6 +16,7 @@ class ChurchCentralAdvancedModuleApiController extends Controller
 {
     public function index(Request $request, AccessScope $scope, string $module): JsonResponse
     {
+        $this->authorizeModule($request, $module);
         $config = $this->config($module);
         $model = $config['model'];
 
@@ -36,6 +37,7 @@ class ChurchCentralAdvancedModuleApiController extends Controller
         AdvancedChurchModuleController $advanced,
         string $module
     ): JsonResponse {
+        $this->authorizeModule($request, $module);
         $config = $this->config($module);
         $data = $request->validate($config['rules']);
         $scope->ensureChurchAllowed($request->user(), (int) $data['church_id']);
@@ -56,6 +58,7 @@ class ChurchCentralAdvancedModuleApiController extends Controller
 
     public function update(Request $request, AccessScope $scope, string $module, int $id): JsonResponse
     {
+        $this->authorizeModule($request, $module);
         $config = $this->config($module);
         $model = $config['model'];
         $item = $model::findOrFail($id);
@@ -78,6 +81,19 @@ class ChurchCentralAdvancedModuleApiController extends Controller
         abort_unless(isset(AdvancedChurchModuleController::MODULES[$module]), 404);
 
         return AdvancedChurchModuleController::MODULES[$module];
+    }
+
+    /**
+     * Permission fine par module (meme table que les routes web) : la garde
+     * de route est volontairement large sur ce point d'entree generique.
+     */
+    private function authorizeModule(Request $request, string $module): void
+    {
+        abort_unless(isset(AdvancedChurchModuleController::MODULES[$module]), 404);
+        abort_unless(
+            $request->user()?->can(AdvancedChurchModuleController::permissionFor($module)),
+            403,
+        );
     }
 
     private function ensureLinkedResourceAllowed(string $module, array $data): void

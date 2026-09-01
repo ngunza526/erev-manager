@@ -146,6 +146,7 @@ class RdcSpecificationTest extends TestCase
             'level' => 'eglise',
             'status' => 'actif',
         ]);
+        $this->withRoles($user, Rbac::SECRETAIRE);
 
         $token = $user->createToken('mobile-rdc')->plainTextToken;
 

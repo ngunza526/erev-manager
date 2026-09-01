@@ -9,13 +9,16 @@ use App\Models\Community;
 use App\Models\Member;
 use App\Models\SolutionModule;
 use App\Models\User;
+use App\Support\Rbac;
 use Database\Seeders\EreveSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Tests\Concerns\AssignsRoles;
 use Tests\TestCase;
 
 class ApiAccessTest extends TestCase
 {
+    use AssignsRoles;
     use RefreshDatabase;
 
     public function test_api_token_login_exposes_core_rest_endpoints(): void
@@ -25,7 +28,7 @@ class ApiAccessTest extends TestCase
         $this->getJson('/api/me')->assertUnauthorized();
 
         $tokenResponse = $this->postJson('/api/auth/token', [
-            'email' => 'admin@ereve.cd',
+            'email' => 'eglise.admin@ereve.cd',
             'password' => 'password',
             'device_name' => 'mobile-rdc',
         ])->assertOk()
@@ -35,7 +38,7 @@ class ApiAccessTest extends TestCase
 
         $this->withToken($token)->getJson('/api/me')
             ->assertOk()
-            ->assertJsonPath('user.email', 'admin@ereve.cd');
+            ->assertJsonPath('user.email', 'eglise.admin@ereve.cd');
 
         $this->withToken($token)->getJson('/api/churches')
             ->assertOk()
@@ -174,6 +177,8 @@ class ApiAccessTest extends TestCase
             'level' => 'eglise',
             'status' => 'actif',
         ]);
+
+        $this->withRoles($user, Rbac::SECRETAIRE);
 
         return [$user, $ownChurch, $otherChurch];
     }
