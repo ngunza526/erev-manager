@@ -39,7 +39,7 @@ class NavigationIntegrityTest extends TestCase
         $communityUser = User::where('email', 'admin@ereve.cd')->firstOrFail();
         $churchUser = User::where('email', 'eglise.admin@ereve.cd')->firstOrFail();
         $links = $this->layoutLinks();
-        $communityLinks = ['/communautes', '/eglises', '/utilisateurs', '/roles-permissions'];
+        $communityLinks = ['/communautes', '/eglises', '/utilisateurs', '/roles-permissions', '/journal-audit'];
 
         $this->assertGreaterThan(30, count($links));
 

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountingController;
 use App\Http\Controllers\AdvancedChurchModuleController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\OtpChallengeController;
 use App\Http\Controllers\BudgetController;
@@ -63,6 +64,9 @@ Route::middleware('auth')->group(function () {
             Route::post('roles-permissions/roles', [RolePermissionController::class, 'storeRole'])->name('roles-permissions.roles.store');
             Route::post('roles-permissions/permissions', [RolePermissionController::class, 'storePermission'])->name('roles-permissions.permissions.store');
             Route::put('roles-permissions/roles/{role}/permissions', [RolePermissionController::class, 'syncRolePermissions'])->name('roles-permissions.roles.permissions');
+        });
+        Route::middleware('permission:'.Rbac::AUDIT_VIEW)->group(function () {
+            Route::get('journal-audit', [AuditLogController::class, 'index'])->name('audit-logs.index');
         });
     });
 

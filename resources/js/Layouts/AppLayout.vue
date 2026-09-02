@@ -32,6 +32,7 @@ const communityNavSections = [
       { href: '/eglises', label: 'Eglises' },
       { href: '/utilisateurs', label: 'Utilisateurs' },
       { href: '/roles-permissions', label: 'Roles et permissions' },
+      { href: '/journal-audit', label: "Journal d'audit" },
     ],
   },
 ];
