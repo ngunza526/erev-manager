@@ -155,10 +155,11 @@ class SecurityHardeningTest extends TestCase
             'payment_method' => 'cash',
         ])->assertRedirect();
 
-        $this->assertDatabaseHas('journal_entries', [
-            'description' => 'Don public Tricheur',
+        $this->assertDatabaseHas('public_contributions', [
+            'contributor_name' => 'Tricheur',
             'currency' => 'CDF',
             'exchange_rate' => 2850,
+            'status' => 'pending',
         ]);
     }
 
@@ -175,7 +176,7 @@ class SecurityHardeningTest extends TestCase
             'payment_method' => 'bank',
         ])->assertSessionHasErrors('amount');
 
-        $this->assertDatabaseMissing('journal_entries', ['description' => 'Don public Gros montant']);
+        $this->assertDatabaseMissing('public_contributions', ['contributor_name' => 'Gros montant']);
     }
 
     // --- SEC-28 -----------------------------------------------------------

@@ -7,6 +7,7 @@ use App\Models\Church;
 use App\Models\Community;
 use App\Models\ExchangeRate;
 use App\Models\JournalEntryLine;
+use App\Models\PublicContribution;
 use App\Models\User;
 use App\Support\Rbac;
 use Database\Seeders\EreveSeeder;
@@ -114,7 +115,7 @@ class RdcSpecificationTest extends TestCase
         ]);
     }
 
-    public function test_card_public_donation_is_accounted_on_bank_account(): void
+    public function test_card_public_donation_is_accounted_on_bank_account_after_validation(): void
     {
         $church = $this->church();
         ChartOfAccount::create(['code' => '501', 'label' => 'Banque principale', 'class' => 5, 'normal_side' => 'debit']);
@@ -125,12 +126,28 @@ class RdcSpecificationTest extends TestCase
             'type' => 'don',
             'amount' => 50,
             'currency' => 'USD',
-            'exchange_rate' => 2865,
             'payment_method' => 'card',
             'phone' => null,
         ])->assertRedirect();
 
+        // SEC-27 : rien au grand livre avant validation.
+        $this->assertDatabaseCount('journal_entries', 0);
+        $contributionId = PublicContribution::where('contributor_name', 'Donateur carte')->value('id');
+
+        $agent = User::factory()->create([
+            'status' => 'actif',
+            'level' => 'eglise',
+            'church_id' => $church->id,
+            'community_id' => $church->community_id,
+        ]);
+        $this->withRoles($agent, Rbac::CAISSIER);
+
+        $this->actingAs($agent)
+            ->post("/contributions-publiques/{$contributionId}/valider")
+            ->assertRedirect();
+
         $this->assertDatabaseHas('journal_entries', ['description' => 'Don public Donateur carte', 'currency' => 'USD']);
+        $this->assertDatabaseHas('public_contributions', ['id' => $contributionId, 'status' => 'validated']);
         $this->assertTrue(JournalEntryLine::whereHas('account', fn ($query) => $query->where('code', '501'))->where('debit', 50)->exists());
     }
 

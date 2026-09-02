@@ -18,6 +18,7 @@ use App\Http\Controllers\MemberController;
 use App\Http\Controllers\MinistryGroupController;
 use App\Http\Controllers\OfflineSyncController;
 use App\Http\Controllers\PastoralModuleController;
+use App\Http\Controllers\PublicContributionController;
 use App\Http\Controllers\PublicFlowController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RolePermissionController;
@@ -92,6 +93,13 @@ Route::middleware('auth')->group(function () {
         Route::post('comptabilite/ecritures', [AccountingController::class, 'manualEntry'])
             ->middleware('permission:'.Rbac::ACCOUNTING_POST)
             ->name('accounting.manual-entry');
+
+        // SEC-27 : file d'attente des contributions publiques a valider.
+        Route::middleware('permission:'.Rbac::CONTRIBUTIONS_RECORD)->group(function () {
+            Route::get('contributions-publiques', [PublicContributionController::class, 'index'])->name('public-contributions.index');
+            Route::post('contributions-publiques/{publicContribution}/valider', [PublicContributionController::class, 'approve'])->name('public-contributions.approve');
+            Route::post('contributions-publiques/{publicContribution}/rejeter', [PublicContributionController::class, 'reject'])->name('public-contributions.reject');
+        });
 
         Route::get('plan-comptable', [ChartOfAccountController::class, 'index'])
             ->middleware('permission:'.Rbac::REPORTS_VIEW)

@@ -6,8 +6,9 @@ use App\Models\Church;
 use App\Models\ChurchEvent;
 use App\Models\EventRegistration;
 use App\Models\ExchangeRate;
+use App\Models\PublicContribution;
 use App\Models\Visitor;
-use App\Services\Accounting\AccountingService;
+use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -25,7 +26,7 @@ class PublicFlowController extends Controller
         ]);
     }
 
-    public function storeDonation(Request $request, Church $church, AccountingService $accounting): RedirectResponse
+    public function storeDonation(Request $request, Church $church): RedirectResponse
     {
         $data = $request->validate([
             'giver_name' => ['nullable', 'string', 'max:255'],
@@ -36,21 +37,30 @@ class PublicFlowController extends Controller
             'phone' => ['nullable', 'string', 'max:80'],
         ]);
 
-        // SEC-27 : montant plafonne et taux de change resolu cote serveur
-        // (jamais fourni par un appelant non authentifie).
+        // SEC-27 : montant plafonne, taux resolu cote serveur, et surtout aucune
+        // ecriture comptable ici — la contribution attend la validation d'un agent.
         $this->guardPublicAmount($data['amount'], $data['currency'], 'amount');
 
-        $accounting->recordCollection([
+        $contribution = PublicContribution::create([
             'church_id' => $church->id,
-            'type' => $data['type'],
-            'amount' => $data['amount'],
+            'kind' => 'donation',
+            'contributor_name' => $data['giver_name'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'contribution_type' => $data['type'],
             'currency' => $data['currency'],
+            'amount' => $data['amount'],
             'exchange_rate' => $this->serverExchangeRate($data['currency']),
-            'cash_account_code' => $this->cashAccount($data['payment_method']),
-            'description' => 'Don public '.($data['giver_name'] ?: 'anonyme'),
+            'payment_method' => $data['payment_method'],
+            'status' => PublicContribution::STATUS_PENDING,
         ]);
 
-        return back()->with('success', 'Contribution recue et comptabilisee.');
+        Audit::record('contribution.public.submitted', $contribution, [
+            'kind' => 'donation',
+            'amount' => (float) $data['amount'],
+            'currency' => $data['currency'],
+        ], $church->id);
+
+        return back()->with('success', "Contribution recue, en attente de validation par l'eglise.");
     }
 
     public function visitor(Church $church): Response
@@ -96,7 +106,7 @@ class PublicFlowController extends Controller
         ]);
     }
 
-    public function storeEvent(Request $request, ChurchEvent $event, AccountingService $accounting): RedirectResponse
+    public function storeEvent(Request $request, ChurchEvent $event): RedirectResponse
     {
         $data = $request->validate([
             'attendee_name' => ['required', 'string', 'max:255'],
@@ -106,35 +116,24 @@ class PublicFlowController extends Controller
             'payment_method' => ['required', Rule::in(['cash', 'bank', 'card', 'mobile_money', 'mpesa', 'airtel_money', 'orange_money'])],
         ]);
 
-        $exchangeRate = $this->serverExchangeRate($data['currency']);
-        $entry = null;
-        if ((float) ($data['amount_paid'] ?? 0) > 0) {
-            // SEC-27 : plafond + taux serveur, comme pour les dons publics.
-            $this->guardPublicAmount((float) $data['amount_paid'], $data['currency'], 'amount_paid');
-
-            $entry = $accounting->recordBalancedEntry([
-                'church_id' => $event->church_id,
-                'type' => 'event_registration',
-                'entry_date' => now()->toDateString(),
-                'description' => "Inscription publique {$event->title}",
-                'currency' => $data['currency'],
-                'exchange_rate' => $exchangeRate,
-                'lines' => [
-                    ['account_code' => $this->cashAccount($data['payment_method']), 'label' => 'Encaissement inscription publique', 'debit' => $data['amount_paid'], 'credit' => 0],
-                    ['account_code' => '704', 'label' => 'Revenu evenement', 'debit' => 0, 'credit' => $data['amount_paid']],
-                ],
-            ]);
+        $amountPaid = (float) ($data['amount_paid'] ?? 0);
+        if ($amountPaid > 0) {
+            $this->guardPublicAmount($amountPaid, $data['currency'], 'amount_paid');
         }
 
-        EventRegistration::create([
+        $exchangeRate = $this->serverExchangeRate($data['currency']);
+
+        // Le billet est emis tout de suite ; la comptabilisation de l'encaissement
+        // attend la validation d'un agent (SEC-27) -> journal_entry_id reste nul.
+        $registration = EventRegistration::create([
             'church_id' => $event->church_id,
             'church_event_id' => $event->id,
-            'journal_entry_id' => $entry?->id,
+            'journal_entry_id' => null,
             'attendee_name' => $data['attendee_name'],
             'phone' => $data['phone'] ?? null,
             'ticket_code' => 'PUB-'.strtoupper(Str::random(8)),
             'currency' => $data['currency'],
-            'amount_paid' => $data['amount_paid'] ?? 0,
+            'amount_paid' => $amountPaid,
             'exchange_rate' => $exchangeRate,
             'payment_method' => $data['payment_method'],
             'check_in_status' => 'registered',
@@ -142,16 +141,30 @@ class PublicFlowController extends Controller
 
         $event->increment('registrations_count');
 
-        return back()->with('success', 'Inscription confirmee.');
-    }
+        if ($amountPaid > 0) {
+            $contribution = PublicContribution::create([
+                'church_id' => $event->church_id,
+                'kind' => 'event_registration',
+                'church_event_id' => $event->id,
+                'event_registration_id' => $registration->id,
+                'contributor_name' => $data['attendee_name'],
+                'phone' => $data['phone'] ?? null,
+                'currency' => $data['currency'],
+                'amount' => $amountPaid,
+                'exchange_rate' => $exchangeRate,
+                'payment_method' => $data['payment_method'],
+                'status' => PublicContribution::STATUS_PENDING,
+            ]);
 
-    private function cashAccount(string $paymentMethod): string
-    {
-        return match ($paymentMethod) {
-            'bank', 'card' => '501',
-            'mobile_money', 'mpesa', 'airtel_money', 'orange_money' => '515',
-            default => '511',
-        };
+            Audit::record('contribution.public.submitted', $contribution, [
+                'kind' => 'event_registration',
+                'event' => $event->title,
+                'amount' => $amountPaid,
+                'currency' => $data['currency'],
+            ], $event->church_id);
+        }
+
+        return back()->with('success', 'Inscription confirmee.');
     }
 
     /**

@@ -68,6 +68,7 @@ const churchNavSections = [
     label: 'Finance',
     items: [
       { href: '/comptabilite', label: 'Comptabilite' },
+      { href: '/contributions-publiques', label: 'Contributions publiques' },
       { href: '/depenses', label: 'Depenses' },
       { href: '/boutique-ressources', label: 'Boutique' },
       { href: '/fournisseurs', label: 'Fournisseurs' },

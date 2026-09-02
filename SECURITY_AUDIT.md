@@ -93,24 +93,30 @@ ajoutees et commentees dans `.env.example`.
 
 ## SEC-27 — Endpoints publics a impact financier direct · Moyenne
 
-`storeDonation` et `storeEvent` (non authentifies) creent des ecritures
-comptables avec `amount`, `exchange_rate` et `payment_method` fournis par
-l'appelant. Un `exchange_rate` arbitraire fausse directement la comptabilite
-multidevise ; un `amount` non borne pollue le grand livre.
+`storeDonation` et `storeEvent` (non authentifies) creaient des ecritures
+comptables immediates avec `amount`, `exchange_rate` et `payment_method` fournis
+par l'appelant. Un `exchange_rate` arbitraire fausse la comptabilite multidevise,
+un `amount` non borne pollue le grand livre, et un flux non authentifie ne
+devrait pas ecrire directement au grand livre.
 
 **Correctifs appliques** :
 
 - limitation de debit (SEC-20) ;
-- le `exchange_rate` n'est plus accepte des formulaires publics : il est resolu
-  cote serveur depuis `exchange_rates` (`PublicFlowController::serverExchangeRate`),
-  et le champ correspondant est retire des pages Vue publiques ;
+- `exchange_rate` n'est plus accepte des formulaires publics : resolu cote
+  serveur depuis `exchange_rates` (`PublicFlowController::serverExchangeRate`),
+  champ retire des pages Vue publiques ;
 - plafond de montant par devise (`config/contributions.php`,
-  `PublicFlowController::guardPublicAmount`) ; au-dela, l'operation doit passer
-  par un encaissement authentifie.
+  `PublicFlowController::guardPublicAmount`) ;
+- **file d'attente de validation** : les soumissions publiques creent une ligne
+  `public_contributions` a l'etat `pending` — aucune ecriture comptable. Un agent
+  porteur de `contributions.record` valide (`PublicContributionController::approve`,
+  qui passe alors l'ecriture) ou rejette (`::reject`, avec motif) depuis
+  `/contributions-publiques`. Pour une inscription payante, le billet est emis
+  immediatement mais `event_registrations.journal_entry_id` reste nul jusqu'a la
+  validation. Chaque transition est tracee au journal d'audit
+  (`contribution.public.submitted` / `.validated` / `.rejected`).
 
-**Recommandation non tranchee (suivi produit)** : faire transiter ces
-contributions par un etat « a valider » plutot que par une ecriture immediate,
-et/ou ajouter un captcha.
+**Reste en suivi produit** : ajout d'un captcha sur les formulaires publics.
 
 ## SEC-28 — Escalade via offline-sync : ecriture comptable sans `accounting.post` · Haute
 

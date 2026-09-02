@@ -12,7 +12,7 @@ class PublicFlowTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_public_donation_page_records_accounting_collection(): void
+    public function test_public_donation_creates_a_pending_contribution_without_accounting(): void
     {
         $this->seed(EreveSeeder::class);
         $church = Church::firstOrFail();
@@ -24,17 +24,20 @@ class PublicFlowTest extends TestCase
             'type' => 'don',
             'amount' => 25000,
             'currency' => 'CDF',
-            'exchange_rate' => 2850,
             'payment_method' => 'mobile_money',
             'phone' => '+243990000404',
         ])->assertRedirect();
 
-        $this->assertDatabaseHas('journal_entries', [
+        // SEC-27 : la contribution attend une validation, rien au grand livre.
+        $this->assertDatabaseHas('public_contributions', [
             'church_id' => $church->id,
-            'type' => 'don',
-            'description' => 'Don public Donateur public',
+            'kind' => 'donation',
+            'contribution_type' => 'don',
+            'contributor_name' => 'Donateur public',
             'currency' => 'CDF',
+            'status' => 'pending',
         ]);
+        $this->assertDatabaseCount('journal_entries', 0);
     }
 
     public function test_public_visitor_page_creates_follow_up_record(): void
@@ -59,7 +62,7 @@ class PublicFlowTest extends TestCase
         ]);
     }
 
-    public function test_public_event_registration_creates_ticket_and_accounting_entry(): void
+    public function test_public_event_registration_issues_ticket_and_queues_payment_for_validation(): void
     {
         $this->seed(EreveSeeder::class);
         $event = ChurchEvent::where('title', 'Conference de reveil')->firstOrFail();
@@ -72,19 +75,25 @@ class PublicFlowTest extends TestCase
             'phone' => '+243990000606',
             'amount_paid' => 18000,
             'currency' => 'CDF',
-            'exchange_rate' => 2850,
             'payment_method' => 'mobile_money',
         ])->assertRedirect();
 
+        // Le billet est emis tout de suite...
         $this->assertDatabaseHas('event_registrations', [
             'church_event_id' => $event->id,
             'attendee_name' => 'Participant public',
             'amount_paid' => 18000,
-        ]);
-        $this->assertDatabaseHas('journal_entries', [
-            'type' => 'event_registration',
-            'description' => 'Inscription publique Conference de reveil',
+            'journal_entry_id' => null,
         ]);
         $this->assertSame($before + 1, $event->fresh()->registrations_count);
+
+        // ...mais l'encaissement attend une validation (SEC-27).
+        $this->assertDatabaseHas('public_contributions', [
+            'church_id' => $event->church_id,
+            'kind' => 'event_registration',
+            'church_event_id' => $event->id,
+            'status' => 'pending',
+        ]);
+        $this->assertDatabaseCount('journal_entries', 0);
     }
 }
