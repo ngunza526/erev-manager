@@ -4,6 +4,7 @@ namespace App\Services\Accounting;
 
 use App\Models\ChartOfAccount;
 use App\Models\JournalEntry;
+use App\Support\Audit;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -44,7 +45,7 @@ class AccountingService
             throw ValidationException::withMessages(['lines' => 'Une ecriture comptable doit equilibrer debit et credit.']);
         }
 
-        return DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($data, $debit) {
             $entry = JournalEntry::create([
                 'church_id' => $data['church_id'],
                 'reference' => $data['reference'] ?? $this->nextReference(),
@@ -67,6 +68,13 @@ class AccountingService
                     'credit' => $line['credit'],
                 ]);
             }
+
+            Audit::record('accounting.entry.posted', $entry, [
+                'reference' => $entry->reference,
+                'type' => $entry->type,
+                'amount' => round($debit, 2),
+                'currency' => $entry->currency,
+            ], (int) $data['church_id']);
 
             return $entry->load('lines.account', 'church');
         });

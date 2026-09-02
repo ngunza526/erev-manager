@@ -8,6 +8,7 @@ use App\Models\Member;
 use App\Models\User;
 use App\Services\AccessScope;
 use App\Services\WorkspaceContext;
+use App\Support\Audit;
 use App\Support\Rbac;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -96,6 +97,14 @@ class UserManagementController extends Controller
         ]);
 
         $user->syncRoles([$data['role']]);
+
+        Audit::record('user.created', $user, [
+            'email' => $user->email,
+            'level' => $data['level'],
+            'role' => $data['role'],
+            'church_id' => $user->church_id,
+            'community_id' => $user->community_id,
+        ], $user->church_id ? (int) $user->church_id : null);
 
         return back()->with('success', 'Utilisateur cree avec role et OTP requis.');
     }

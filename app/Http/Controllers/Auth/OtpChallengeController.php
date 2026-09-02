@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -37,6 +38,8 @@ class OtpChallengeController extends Controller
         $user->forceFill(['otp_verified_at' => now()])->save();
         Auth::login($user);
         $request->session()->regenerate();
+
+        Audit::record('auth.login', $user);
 
         return redirect()->intended(route('dashboard'));
     }

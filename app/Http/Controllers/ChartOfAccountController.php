@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ChartOfAccount;
+use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -20,14 +21,25 @@ class ChartOfAccountController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        ChartOfAccount::create($this->validated($request));
+        $account = ChartOfAccount::create($this->validated($request));
+
+        Audit::record('reference.chart_of_account.created', $account, [
+            'code' => $account->code,
+            'label' => $account->label,
+        ]);
 
         return back()->with('success', 'Compte comptable cree.');
     }
 
     public function update(Request $request, ChartOfAccount $planComptable): RedirectResponse
     {
+        $before = $planComptable->only(['code', 'label', 'class', 'normal_side', 'is_active']);
         $planComptable->update($this->validated($request, $planComptable));
+
+        Audit::record('reference.chart_of_account.updated', $planComptable, [
+            'from' => $before,
+            'to' => $planComptable->only(['code', 'label', 'class', 'normal_side', 'is_active']),
+        ]);
 
         return back()->with('success', 'Compte comptable mis a jour.');
     }
@@ -35,7 +47,11 @@ class ChartOfAccountController extends Controller
     public function destroy(ChartOfAccount $planComptable): RedirectResponse
     {
         abort_if($planComptable->is_system, 422, 'Un compte systeme ne peut pas etre supprime.');
+
+        $snapshot = ['code' => $planComptable->code, 'label' => $planComptable->label];
         $planComptable->delete();
+
+        Audit::record('reference.chart_of_account.deleted', $planComptable, $snapshot);
 
         return back()->with('success', 'Compte comptable supprime.');
     }

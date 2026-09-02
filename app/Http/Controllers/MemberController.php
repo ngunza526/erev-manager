@@ -6,6 +6,7 @@ use App\Enums\MemberStatus;
 use App\Models\Church;
 use App\Models\Member;
 use App\Services\AccessScope;
+use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -60,7 +61,13 @@ class MemberController extends Controller
             'status' => ['required', Rule::in(array_column(MemberStatus::cases(), 'value'))],
         ]);
 
+        $previous = $member->status->value;
         $member->update(['status' => $data['status']]);
+
+        Audit::record('member.promoted', $member, [
+            'from' => $previous,
+            'to' => $data['status'],
+        ]);
 
         return back()->with('success', 'Statut membre mis a jour.');
     }

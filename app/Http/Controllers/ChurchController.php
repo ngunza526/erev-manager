@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Church;
-use App\Models\Community;
 use App\Services\AccessScope;
+use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -36,7 +36,12 @@ class ChurchController extends Controller
         ]);
 
         $scope->ensureCommunityAllowed($request->user(), (int) $data['community_id']);
-        Church::create($data);
+        $church = Church::create($data);
+
+        Audit::record('reference.church.created', $church, [
+            'designation' => $church->designation,
+            'community_id' => (int) $church->community_id,
+        ]);
 
         return back()->with('success', 'Eglise rattachee a la communaute.');
     }

@@ -21,6 +21,7 @@ use App\Models\ResourceSale;
 use App\Models\VendorBill;
 use App\Services\AccessScope;
 use App\Services\Accounting\AccountingService;
+use App\Support\Audit;
 use App\Support\Rbac;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -594,6 +595,15 @@ class AdvancedChurchModuleController extends Controller
             'status' => 'paid',
         ]);
 
+        Audit::record('payment.vendor_bill.paid', $vendorBill, [
+            'vendor' => $vendorBill->vendor_name,
+            'bill_number' => $vendorBill->bill_number,
+            'amount' => (float) $vendorBill->amount,
+            'currency' => $vendorBill->currency,
+            'payment_method' => $data['payment_method'],
+            'journal_entry_id' => $entry->id,
+        ], (int) $vendorBill->church_id);
+
         return back()->with('success', 'Facture fournisseur payee et comptabilisee.');
     }
 
@@ -619,6 +629,15 @@ class AdvancedChurchModuleController extends Controller
             'paid_at' => $data['paid_at'],
             'status' => 'paid',
         ]);
+
+        Audit::record('payment.payroll_run.paid', $payrollRun, [
+            'period' => $payrollRun->period_label,
+            'staff' => $payrollRun->staff_name,
+            'net_amount' => (float) $payrollRun->net_amount,
+            'currency' => $payrollRun->currency,
+            'payment_method' => $data['payment_method'],
+            'journal_entry_id' => $entry->id,
+        ], (int) $payrollRun->church_id);
 
         return back()->with('success', 'Paie payee et comptabilisee.');
     }

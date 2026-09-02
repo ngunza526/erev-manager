@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -33,6 +34,12 @@ class RolePermissionController extends Controller
         $role->forceFill(['level' => $data['level']])->save();
         $role->syncPermissions($data['permissions'] ?? []);
 
+        Audit::record('rbac.role.created', $role, [
+            'name' => $role->name,
+            'level' => $data['level'],
+            'permissions' => $data['permissions'] ?? [],
+        ]);
+
         return back()->with('success', 'Role cree avec permissions.');
     }
 
@@ -42,7 +49,9 @@ class RolePermissionController extends Controller
             'name' => ['required', 'string', 'max:255', 'unique:permissions,name'],
         ]);
 
-        Permission::create(['name' => $data['name'], 'guard_name' => 'web']);
+        $permission = Permission::create(['name' => $data['name'], 'guard_name' => 'web']);
+
+        Audit::record('rbac.permission.created', $permission, ['name' => $permission->name]);
 
         return back()->with('success', 'Permission creee.');
     }
@@ -54,7 +63,14 @@ class RolePermissionController extends Controller
             'permissions.*' => ['exists:permissions,name'],
         ]);
 
+        $before = $role->permissions->pluck('name')->sort()->values()->all();
         $role->syncPermissions($data['permissions'] ?? []);
+
+        Audit::record('rbac.role.permissions_synced', $role, [
+            'role' => $role->name,
+            'from' => $before,
+            'to' => $data['permissions'] ?? [],
+        ]);
 
         return back()->with('success', 'Permissions du role mises a jour.');
     }

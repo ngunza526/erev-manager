@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,6 +30,8 @@ class AuthenticatedSessionController extends Controller
         $user = User::where('email', $credentials['email'])->first();
 
         if (! $user || ! Hash::check($credentials['password'], $user->password) || $user->status !== 'actif') {
+            Audit::record('auth.login_failed', $user, ['email' => $credentials['email']]);
+
             throw ValidationException::withMessages([
                 'email' => 'Identifiants invalides ou compte inactif.',
             ]);
@@ -43,6 +46,7 @@ class AuthenticatedSessionController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
+        Audit::record('auth.logout', $request->user());
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

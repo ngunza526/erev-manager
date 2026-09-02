@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Community;
 use App\Services\AccessScope;
+use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -37,7 +38,12 @@ class CommunityController extends Controller
             $scope->ensureCommunityAllowed($request->user(), $request->user()->community_id);
         }
 
-        Community::create($data);
+        $community = Community::create($data);
+
+        Audit::record('reference.community.created', $community, [
+            'designation' => $community->designation,
+            'authorization_number' => $community->authorization_number,
+        ]);
 
         return back()->with('success', 'Communaute creee.');
     }
