@@ -54,6 +54,15 @@ class EreveSeeder extends Seeder
 {
     public function run(): void
     {
+        // SEC-26 : ce seeder cree des comptes de demonstration (mot de passe
+        // "password"). Interdit en production sauf autorisation explicite.
+        if (app()->environment('production') && ! filter_var(env('EREVE_ALLOW_DEMO_SEED', false), FILTER_VALIDATE_BOOL)) {
+            throw new \RuntimeException(
+                'EreveSeeder est un jeu de demonstration : execution refusee en production. '
+                .'Definir EREVE_ALLOW_DEMO_SEED=true pour forcer.'
+            );
+        }
+
         foreach ([['USD', 'Dollar americain', true], ['CDF', 'Franc congolais', false]] as [$code, $name, $base]) {
             Currency::updateOrCreate(['code' => $code], ['name' => $name, 'is_base' => $base]);
         }

@@ -10,18 +10,40 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class MediaUploadController extends Controller
 {
+    /**
+     * SEC-22 — Liste blanche stricte : rien qui puisse etre execute ou rendu
+     * comme du HTML depuis le disque public (pas de php/phtml/svg/html/js...).
+     */
+    private const ALLOWED_EXTENSIONS = [
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp',
+        'mp3', 'm4a', 'aac', 'ogg', 'oga', 'wav', 'flac',
+        'mp4', 'm4v', 'webm', 'mov',
+        'pdf',
+    ];
+
+    private const ALLOWED_MEDIA_TYPES = ['image', 'audio', 'video', 'document'];
+
+    /** Plafond de taille du corps base64 par morceau (~12 Mio decode). */
+    private const MAX_CHUNK_BASE64_LENGTH = 16_000_000;
+
     public function initiate(Request $request, AccessScope $scope): JsonResponse
     {
         $data = $request->validate([
             'church_id' => ['required', 'exists:churches,id'],
             'title' => ['required', 'string', 'max:255'],
-            'media_type' => ['required', 'string', 'max:80'],
+            'media_type' => ['required', 'string', Rule::in(self::ALLOWED_MEDIA_TYPES)],
             'category' => ['required', 'string', 'max:120'],
-            'original_filename' => ['required', 'string', 'max:255'],
+            'original_filename' => ['required', 'string', 'max:255', function (string $attribute, mixed $value, callable $fail) {
+                $extension = strtolower((string) pathinfo((string) $value, PATHINFO_EXTENSION));
+                if (! in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
+                    $fail('Type de fichier non autorise.');
+                }
+            }],
             'total_chunks' => ['required', 'integer', 'min:1', 'max:500'],
         ]);
 
@@ -55,7 +77,7 @@ class MediaUploadController extends Controller
 
         $data = $request->validate([
             'chunk_index' => ['required', 'integer', 'min:0'],
-            'content_base64' => ['required', 'string'],
+            'content_base64' => ['required', 'string', 'max:'.self::MAX_CHUNK_BASE64_LENGTH],
         ]);
 
         if ((int) $data['chunk_index'] >= $upload->total_chunks) {
@@ -94,8 +116,15 @@ class MediaUploadController extends Controller
         }
 
         $safeName = Str::slug(pathinfo($upload->original_filename, PATHINFO_FILENAME)) ?: 'media';
-        $extension = pathinfo($upload->original_filename, PATHINFO_EXTENSION);
-        $filename = $safeName.'-'.$upload->upload_id.($extension ? '.'.$extension : '');
+        $extension = strtolower((string) pathinfo($upload->original_filename, PATHINFO_EXTENSION));
+
+        // SEC-22 : defense en profondeur, on refuse a l'ecriture toute extension
+        // qui aurait echappe a la validation d'initiation.
+        if (! in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
+            throw ValidationException::withMessages(['upload' => 'Type de fichier non autorise.']);
+        }
+
+        $filename = $safeName.'-'.$upload->upload_id.'.'.$extension;
         $storagePath = 'church-media/'.$filename;
 
         $assembled = '';

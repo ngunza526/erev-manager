@@ -34,7 +34,7 @@ class MediaUploadApiTest extends TestCase
             'title' => 'Predication offline',
             'media_type' => 'audio',
             'category' => 'sermon',
-            'original_filename' => 'predication.txt',
+            'original_filename' => 'predication.mp3',
             'total_chunks' => 2,
         ])->assertCreated()
             ->assertJsonPath('data.status', 'initiated')
@@ -90,7 +90,7 @@ class MediaUploadApiTest extends TestCase
             'title' => 'Media hors perimetre',
             'media_type' => 'audio',
             'category' => 'sermon',
-            'original_filename' => 'foreign.txt',
+            'original_filename' => 'foreign.mp3',
             'total_chunks' => 1,
             'received_chunks' => [],
             'status' => 'initiated',
@@ -101,7 +101,7 @@ class MediaUploadApiTest extends TestCase
             'title' => 'Tentative hors scope',
             'media_type' => 'audio',
             'category' => 'sermon',
-            'original_filename' => 'blocked.txt',
+            'original_filename' => 'blocked.mp3',
             'total_chunks' => 1,
         ])->assertUnprocessable()
             ->assertJsonValidationErrors(['church_id']);
