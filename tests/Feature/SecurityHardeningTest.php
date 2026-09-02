@@ -139,6 +139,45 @@ class SecurityHardeningTest extends TestCase
         ])->assertJsonValidationErrors(['media_type']);
     }
 
+    // --- SEC-27 -----------------------------------------------------------
+
+    public function test_public_donation_ignores_client_exchange_rate(): void
+    {
+        $this->seed(EreveSeeder::class);
+        $church = Church::firstOrFail();
+
+        $this->post("/public/eglises/{$church->id}/don", [
+            'giver_name' => 'Tricheur',
+            'type' => 'don',
+            'amount' => 1000,
+            'currency' => 'CDF',
+            'exchange_rate' => 99999, // ignore : le serveur impose le taux du jour (2850)
+            'payment_method' => 'cash',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('journal_entries', [
+            'description' => 'Don public Tricheur',
+            'currency' => 'CDF',
+            'exchange_rate' => 2850,
+        ]);
+    }
+
+    public function test_public_donation_amount_is_capped(): void
+    {
+        $this->seed(EreveSeeder::class);
+        $church = Church::firstOrFail();
+
+        $this->post("/public/eglises/{$church->id}/don", [
+            'giver_name' => 'Gros montant',
+            'type' => 'don',
+            'amount' => 999999,
+            'currency' => 'USD',
+            'payment_method' => 'bank',
+        ])->assertSessionHasErrors('amount');
+
+        $this->assertDatabaseMissing('journal_entries', ['description' => 'Don public Gros montant']);
+    }
+
     // --- SEC-28 -----------------------------------------------------------
 
     public function test_offline_sync_manual_entry_requires_accounting_post(): void

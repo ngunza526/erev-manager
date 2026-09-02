@@ -91,16 +91,26 @@ consomme par la validation de creation d'utilisateur.
 (refus en production sauf `EREVE_ALLOW_DEMO_SEED=true`) ; cles de securite
 ajoutees et commentees dans `.env.example`.
 
-## SEC-27 — Endpoints publics a impact financier direct · Moyenne (suivi produit)
+## SEC-27 — Endpoints publics a impact financier direct · Moyenne
 
 `storeDonation` et `storeEvent` (non authentifies) creent des ecritures
 comptables avec `amount`, `exchange_rate` et `payment_method` fournis par
-l'appelant. Meme avec SEC-20, un flux non authentifie ecrivant directement au
-grand livre est un choix a arbitrer.
+l'appelant. Un `exchange_rate` arbitraire fausse directement la comptabilite
+multidevise ; un `amount` non borne pollue le grand livre.
 
-**Correctif applique** : limitation de debit (SEC-20).
-**Recommandation non tranchee** : faire transiter ces contributions par un etat
-« a valider » plutot que par une ecriture immediate, et/ou ajouter un captcha.
+**Correctifs appliques** :
+
+- limitation de debit (SEC-20) ;
+- le `exchange_rate` n'est plus accepte des formulaires publics : il est resolu
+  cote serveur depuis `exchange_rates` (`PublicFlowController::serverExchangeRate`),
+  et le champ correspondant est retire des pages Vue publiques ;
+- plafond de montant par devise (`config/contributions.php`,
+  `PublicFlowController::guardPublicAmount`) ; au-dela, l'operation doit passer
+  par un encaissement authentifie.
+
+**Recommandation non tranchee (suivi produit)** : faire transiter ces
+contributions par un etat « a valider » plutot que par une ecriture immediate,
+et/ou ajouter un captcha.
 
 ## SEC-28 — Escalade via offline-sync : ecriture comptable sans `accounting.post` · Haute
 

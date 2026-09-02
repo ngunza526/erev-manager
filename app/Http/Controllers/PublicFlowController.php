@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Church;
 use App\Models\ChurchEvent;
 use App\Models\EventRegistration;
+use App\Models\ExchangeRate;
 use App\Models\Visitor;
 use App\Services\Accounting\AccountingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,17 +32,20 @@ class PublicFlowController extends Controller
             'type' => ['required', Rule::in(['dime', 'offrande', 'don'])],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'currency' => ['required', Rule::in(['USD', 'CDF'])],
-            'exchange_rate' => ['required', 'numeric', 'min:1'],
             'payment_method' => ['required', Rule::in(['cash', 'bank', 'card', 'mobile_money', 'mpesa', 'airtel_money', 'orange_money'])],
             'phone' => ['nullable', 'string', 'max:80'],
         ]);
+
+        // SEC-27 : montant plafonne et taux de change resolu cote serveur
+        // (jamais fourni par un appelant non authentifie).
+        $this->guardPublicAmount($data['amount'], $data['currency'], 'amount');
 
         $accounting->recordCollection([
             'church_id' => $church->id,
             'type' => $data['type'],
             'amount' => $data['amount'],
             'currency' => $data['currency'],
-            'exchange_rate' => $data['exchange_rate'],
+            'exchange_rate' => $this->serverExchangeRate($data['currency']),
             'cash_account_code' => $this->cashAccount($data['payment_method']),
             'description' => 'Don public '.($data['giver_name'] ?: 'anonyme'),
         ]);
@@ -98,19 +103,22 @@ class PublicFlowController extends Controller
             'phone' => ['nullable', 'string', 'max:80'],
             'amount_paid' => ['nullable', 'numeric', 'min:0'],
             'currency' => ['required', Rule::in(['USD', 'CDF'])],
-            'exchange_rate' => ['required', 'numeric', 'min:1'],
             'payment_method' => ['required', Rule::in(['cash', 'bank', 'card', 'mobile_money', 'mpesa', 'airtel_money', 'orange_money'])],
         ]);
 
+        $exchangeRate = $this->serverExchangeRate($data['currency']);
         $entry = null;
         if ((float) ($data['amount_paid'] ?? 0) > 0) {
+            // SEC-27 : plafond + taux serveur, comme pour les dons publics.
+            $this->guardPublicAmount((float) $data['amount_paid'], $data['currency'], 'amount_paid');
+
             $entry = $accounting->recordBalancedEntry([
                 'church_id' => $event->church_id,
                 'type' => 'event_registration',
                 'entry_date' => now()->toDateString(),
                 'description' => "Inscription publique {$event->title}",
                 'currency' => $data['currency'],
-                'exchange_rate' => $data['exchange_rate'],
+                'exchange_rate' => $exchangeRate,
                 'lines' => [
                     ['account_code' => $this->cashAccount($data['payment_method']), 'label' => 'Encaissement inscription publique', 'debit' => $data['amount_paid'], 'credit' => 0],
                     ['account_code' => '704', 'label' => 'Revenu evenement', 'debit' => 0, 'credit' => $data['amount_paid']],
@@ -127,7 +135,7 @@ class PublicFlowController extends Controller
             'ticket_code' => 'PUB-'.strtoupper(Str::random(8)),
             'currency' => $data['currency'],
             'amount_paid' => $data['amount_paid'] ?? 0,
-            'exchange_rate' => $data['exchange_rate'],
+            'exchange_rate' => $exchangeRate,
             'payment_method' => $data['payment_method'],
             'check_in_status' => 'registered',
         ]);
@@ -144,5 +152,37 @@ class PublicFlowController extends Controller
             'mobile_money', 'mpesa', 'airtel_money', 'orange_money' => '515',
             default => '511',
         };
+    }
+
+    /**
+     * SEC-27 : taux de change de reference (USD -> devise) resolu cote serveur.
+     * USD est la devise de base ; toute autre devise sans taux connu retombe a 1.
+     */
+    private function serverExchangeRate(string $currency): float
+    {
+        if ($currency === 'USD') {
+            return 1.0;
+        }
+
+        $rate = ExchangeRate::where('from_currency', 'USD')
+            ->where('to_currency', $currency)
+            ->latest('rated_at')
+            ->value('rate');
+
+        return (float) ($rate ?: 1.0);
+    }
+
+    /**
+     * SEC-27 : plafond par devise sur les encaissements publics non authentifies.
+     */
+    private function guardPublicAmount(float $amount, string $currency, string $field): void
+    {
+        $max = (float) (config('contributions.public_max_amount.'.$currency) ?? 0);
+
+        if ($max > 0 && $amount > $max) {
+            throw ValidationException::withMessages([
+                $field => 'Montant trop eleve pour une contribution publique ; passez par un encaissement authentifie.',
+            ]);
+        }
     }
 }
