@@ -10,6 +10,7 @@ use App\Models\OfflineSyncBatch;
 use App\Models\User;
 use App\Models\Visitor;
 use App\Services\Accounting\AccountingService;
+use App\Support\Rbac;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -22,8 +23,7 @@ class OfflineSyncService
     public function __construct(
         private readonly AccessScope $scope,
         private readonly AccountingService $accounting,
-    ) {
-    }
+    ) {}
 
     public function sync(User $user, array $data): OfflineSyncBatch
     {
@@ -77,6 +77,16 @@ class OfflineSyncService
         });
     }
 
+    /**
+     * SEC-28 — L'endpoint offline-sync est ouvert aux porteurs de `offline.sync`
+     * (dont Caissier et Secretaire). Sans ce controle, un type d'enregistrement
+     * plus sensible que la permission de synchro le permet passerait quand meme :
+     * une ecriture comptable manuelle exige `accounting.post`, comme la voie web.
+     */
+    private const RECORD_PERMISSIONS = [
+        'manual_journal_entry' => Rbac::ACCOUNTING_POST,
+    ];
+
     private function processRecord(User $user, int $churchId, array $record): array
     {
         Validator::make($record, [
@@ -84,6 +94,14 @@ class OfflineSyncService
             'type' => ['required', Rule::in(['member', 'visitor', 'donation', 'event_registration', 'manual_journal_entry'])],
             'payload' => ['required', 'array'],
         ])->validate();
+
+        $requiredPermission = self::RECORD_PERMISSIONS[$record['type']] ?? null;
+
+        if ($requiredPermission && ! $user->can($requiredPermission)) {
+            throw ValidationException::withMessages([
+                'type' => "Permission insuffisante pour synchroniser un enregistrement de type '{$record['type']}'.",
+            ]);
+        }
 
         return match ($record['type']) {
             'member' => $this->syncMember($churchId, $record),

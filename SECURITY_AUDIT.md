@@ -102,6 +102,20 @@ grand livre est un choix a arbitrer.
 **Recommandation non tranchee** : faire transiter ces contributions par un etat
 « a valider » plutot que par une ecriture immediate, et/ou ajouter un captcha.
 
+## SEC-28 — Escalade via offline-sync : ecriture comptable sans `accounting.post` · Haute
+
+L'endpoint `POST /offline/sync` (web et API) est garde par `permission:offline.sync`,
+detenue par Caissier et Secretaire. Or il accepte des enregistrements de type
+`manual_journal_entry` transmis tels quels a `AccountingService::recordBalancedEntry`.
+Un Caissier (« ne passe pas d'ecriture au grand livre », cf. `RbacEnforcementTest`)
+ou un Secretaire (aucune permission financiere) pouvait ainsi passer des ecritures
+comptables arbitraires, contournant la garde `accounting.post` de la voie web.
+
+**Correctif applique** : `OfflineSyncService::processRecord` exige la permission
+equivalente a la voie en ligne selon le type d'enregistrement
+(`manual_journal_entry` -> `accounting.post`) ; a defaut, l'enregistrement est
+refuse et remonte dans `conflicts` sans interrompre le lot.
+
 ---
 
 ## Points verifies sans anomalie
@@ -111,5 +125,10 @@ grand livre est un choix a arbitrer.
 - `HandleInertiaRequests::share` n'expose que des champs non sensibles.
 - RBAC route + `Gate::before` plateforme coherents (Phase 1b/1c) ;
   scoping `AccessScope` applique sur les actions secondaires (tests dedies).
+- API CRUD (`ChurchCentralCrudApiController`) : chaque `update*` verifie
+  `ensureChurchAllowed` sur le modele lie ET sur le `church_id` entrant
+  (pas d'IDOR, pas de deplacement hors perimetre).
+- `OfflineSyncService` : perimetre eglise verifie et impose a chaque
+  enregistrement ; la permission par type est desormais controlee (SEC-28).
 - Chemins d'upload : `Str::slug` + UUID neutralisent la traversee de repertoire
   (le probleme reste le type de fichier — SEC-22).

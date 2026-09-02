@@ -139,6 +139,39 @@ class SecurityHardeningTest extends TestCase
         ])->assertJsonValidationErrors(['media_type']);
     }
 
+    // --- SEC-28 -----------------------------------------------------------
+
+    public function test_offline_sync_manual_entry_requires_accounting_post(): void
+    {
+        $this->seed(EreveSeeder::class);
+        // Le Caissier a offline.sync mais pas accounting.post.
+        $caissier = User::where('email', 'caissier@ereve.cd')->firstOrFail();
+        $church = Church::firstOrFail();
+
+        $response = $this->actingAs($caissier)->postJson('/offline/sync', [
+            'device_id' => 'dev-sec28',
+            'client_batch_id' => 'batch-sec28',
+            'church_id' => $church->id,
+            'records' => [[
+                'client_id' => 'je-1',
+                'type' => 'manual_journal_entry',
+                'payload' => [
+                    'entry_date' => now()->toDateString(),
+                    'description' => 'Tentative escalade offline',
+                    'currency' => 'USD',
+                    'exchange_rate' => 2850,
+                    'lines' => [
+                        ['account_code' => '511', 'label' => 'x', 'debit' => 10, 'credit' => 0],
+                        ['account_code' => '703', 'label' => 'y', 'debit' => 0, 'credit' => 10],
+                    ],
+                ],
+            ]],
+        ]);
+
+        $response->assertJsonPath('processed_count', 0)->assertJsonCount(1, 'conflicts');
+        $this->assertDatabaseMissing('journal_entries', ['description' => 'Tentative escalade offline']);
+    }
+
     // --- SEC-24 -----------------------------------------------------------
 
     public function test_security_headers_are_present(): void
