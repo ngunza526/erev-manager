@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\User;
+
 return [
 
     /*
@@ -62,7 +64,7 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\User::class),
+            'model' => env('AUTH_MODEL', User::class),
         ],
 
         // 'users' => [
@@ -111,5 +113,21 @@ return [
     */
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Challenge OTP (SEC-21)
+    |--------------------------------------------------------------------------
+    |
+    | otp_demo         : affiche le code sur l'ecran de connexion (jamais en
+    |                    production). Par defaut vrai hors production.
+    | otp_ttl          : duree de validite du code, en secondes.
+    | otp_max_attempts : nombre d'essais avant invalidation et retour au login.
+    |
+    */
+
+    'otp_demo' => (bool) env('OTP_DEMO', env('APP_ENV', 'production') !== 'production'),
+    'otp_ttl' => (int) env('OTP_TTL', 300),
+    'otp_max_attempts' => (int) env('OTP_MAX_ATTEMPTS', 5),
 
 ];

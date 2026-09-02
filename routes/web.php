@@ -29,17 +29,20 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
-    Route::post('login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
+    Route::post('login', [AuthenticatedSessionController::class, 'store'])->middleware('throttle:login')->name('login.store');
     Route::get('otp', [OtpChallengeController::class, 'create'])->name('otp.create');
-    Route::post('otp', [OtpChallengeController::class, 'store'])->name('otp.store');
+    Route::post('otp', [OtpChallengeController::class, 'store'])->middleware('throttle:otp')->name('otp.store');
 });
 
 Route::get('public/eglises/{church}/don', [PublicFlowController::class, 'donation'])->name('public.donation');
-Route::post('public/eglises/{church}/don', [PublicFlowController::class, 'storeDonation'])->name('public.donation.store');
 Route::get('public/eglises/{church}/visiteur', [PublicFlowController::class, 'visitor'])->name('public.visitor');
-Route::post('public/eglises/{church}/visiteur', [PublicFlowController::class, 'storeVisitor'])->name('public.visitor.store');
 Route::get('public/evenements/{event}', [PublicFlowController::class, 'event'])->name('public.event');
-Route::post('public/evenements/{event}', [PublicFlowController::class, 'storeEvent'])->name('public.event.store');
+// SEC-20 : formulaires publics non authentifies -> limitation de debit.
+Route::middleware('throttle:public-form')->group(function () {
+    Route::post('public/eglises/{church}/don', [PublicFlowController::class, 'storeDonation'])->name('public.donation.store');
+    Route::post('public/eglises/{church}/visiteur', [PublicFlowController::class, 'storeVisitor'])->name('public.visitor.store');
+    Route::post('public/evenements/{event}', [PublicFlowController::class, 'storeEvent'])->name('public.event.store');
+});
 
 Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');

@@ -10,7 +10,7 @@ use App\Http\Controllers\OfflineSyncController;
 use App\Support\Rbac;
 use Illuminate\Support\Facades\Route;
 
-Route::post('auth/token', [ApiAuthController::class, 'token']);
+Route::post('auth/token', [ApiAuthController::class, 'token'])->middleware('throttle:api-token');
 
 Route::middleware('auth:sanctum')->group(function () {
     // Contexte utilisateur et referentiels : lecture ouverte a tout jeton.

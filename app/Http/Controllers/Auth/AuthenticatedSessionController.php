@@ -40,8 +40,15 @@ class AuthenticatedSessionController extends Controller
         $otp = (string) random_int(100000, 999999);
         $request->session()->put('auth.pending_user_id', $user->id);
         $request->session()->put('auth.otp_code', $otp);
+        $request->session()->put('auth.otp_expires_at', now()->addSeconds((int) config('auth.otp_ttl', 300))->getTimestamp());
+        $request->session()->put('auth.otp_attempts', 0);
 
-        return redirect()->route('otp.create')->with('success', "Code OTP de demonstration: {$otp}");
+        $redirect = redirect()->route('otp.create');
+
+        // SEC-21 : le code n'est revele que hors production (mode demo).
+        return config('auth.otp_demo')
+            ? $redirect->with('success', "Code OTP de demonstration: {$otp}")
+            : $redirect;
     }
 
     public function destroy(Request $request): RedirectResponse

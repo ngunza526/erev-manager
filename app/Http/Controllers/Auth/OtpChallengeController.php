@@ -29,12 +29,34 @@ class OtpChallengeController extends Controller
             'code' => ['required', 'digits:6'],
         ]);
 
-        if ($data['code'] !== $request->session()->get('auth.otp_code')) {
+        $pendingUserId = $request->session()->get('auth.pending_user_id');
+        $storedCode = (string) $request->session()->get('auth.otp_code', '');
+        $expiresAt = (int) $request->session()->get('auth.otp_expires_at', 0);
+
+        // SEC-21 : session OTP absente ou expiree -> on repart du login.
+        if (! $pendingUserId || $storedCode === '' || $expiresAt < now()->getTimestamp()) {
+            $this->flushOtp($request);
+
+            throw ValidationException::withMessages(['code' => 'Session OTP expiree, reconnectez-vous.']);
+        }
+
+        $attempts = (int) $request->session()->get('auth.otp_attempts', 0) + 1;
+        $request->session()->put('auth.otp_attempts', $attempts);
+
+        if (! hash_equals($storedCode, $data['code'])) {
+            if ($attempts >= (int) config('auth.otp_max_attempts', 5)) {
+                $this->flushOtp($request);
+
+                throw ValidationException::withMessages(['code' => 'Trop de tentatives, reconnectez-vous.']);
+            }
+
             throw ValidationException::withMessages(['code' => 'Code OTP invalide.']);
         }
 
-        $user = User::findOrFail($request->session()->pull('auth.pending_user_id'));
-        $request->session()->forget('auth.otp_code');
+        $user = User::findOrFail($pendingUserId);
+        abort_unless($user->status === 'actif', 403);
+
+        $this->flushOtp($request);
         $user->forceFill(['otp_verified_at' => now()])->save();
         Auth::login($user);
         $request->session()->regenerate();
@@ -42,5 +64,15 @@ class OtpChallengeController extends Controller
         Audit::record('auth.login', $user);
 
         return redirect()->intended(route('dashboard'));
+    }
+
+    private function flushOtp(Request $request): void
+    {
+        $request->session()->forget([
+            'auth.pending_user_id',
+            'auth.otp_code',
+            'auth.otp_expires_at',
+            'auth.otp_attempts',
+        ]);
     }
 }

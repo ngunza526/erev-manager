@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -57,7 +58,7 @@ class UserManagementController extends Controller
             'church_id' => ['nullable', 'exists:churches,id'],
             'community_id' => ['nullable', 'exists:communities,id'],
             'email' => ['required', 'email', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => ['required', 'string', Password::defaults()],
             'level' => ['required', Rule::in(['coordination', 'eglise'])],
             'role' => ['required', 'string'],
         ]);

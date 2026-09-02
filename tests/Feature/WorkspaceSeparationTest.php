@@ -77,7 +77,7 @@ class WorkspaceSeparationTest extends TestCase
             ->post('/utilisateurs', [
                 'name' => 'Financier Eglise',
                 'email' => 'financier-eglise@example.cd',
-                'password' => 'password',
+                'password' => 'Financier2026!',
                 'level' => 'eglise',
                 'church_id' => $church->id,
                 'role' => Rbac::ADMIN_FIN,
