@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Audit;
+use App\Support\Totp;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,7 +21,9 @@ class OtpChallengeController extends Controller
             return redirect()->route('login');
         }
 
-        return Inertia::render('Auth/Otp');
+        return Inertia::render('Auth/Otp', [
+            'method' => (string) $request->session()->get('auth.otp_method', 'email'),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -30,11 +33,11 @@ class OtpChallengeController extends Controller
         ]);
 
         $pendingUserId = $request->session()->get('auth.pending_user_id');
-        $storedCode = (string) $request->session()->get('auth.otp_code', '');
         $expiresAt = (int) $request->session()->get('auth.otp_expires_at', 0);
+        $method = (string) $request->session()->get('auth.otp_method', 'email');
 
-        // SEC-21 : session OTP absente ou expiree -> on repart du login.
-        if (! $pendingUserId || $storedCode === '' || $expiresAt < now()->getTimestamp()) {
+        // Session OTP absente ou expiree -> on repart du login.
+        if (! $pendingUserId || $expiresAt < now()->getTimestamp()) {
             $this->flushOtp($request);
 
             throw ValidationException::withMessages(['code' => 'Session OTP expiree, reconnectez-vous.']);
@@ -43,7 +46,13 @@ class OtpChallengeController extends Controller
         $attempts = (int) $request->session()->get('auth.otp_attempts', 0) + 1;
         $request->session()->put('auth.otp_attempts', $attempts);
 
-        if (! hash_equals($storedCode, $data['code'])) {
+        $user = User::findOrFail($pendingUserId);
+
+        $valid = $method === 'totp'
+            ? Totp::verify((string) $user->otp_secret, $data['code'])
+            : hash_equals((string) $request->session()->get('auth.otp_code', ''), $data['code']);
+
+        if (! $valid) {
             if ($attempts >= (int) config('auth.otp_max_attempts', 5)) {
                 $this->flushOtp($request);
 
@@ -53,7 +62,6 @@ class OtpChallengeController extends Controller
             throw ValidationException::withMessages(['code' => 'Code OTP invalide.']);
         }
 
-        $user = User::findOrFail($pendingUserId);
         abort_unless($user->status === 'actif', 403);
 
         $this->flushOtp($request);
@@ -61,7 +69,7 @@ class OtpChallengeController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        Audit::record('auth.login', $user);
+        Audit::record('auth.login', $user, ['method' => $method]);
 
         return redirect()->intended(route('dashboard'));
     }
@@ -73,6 +81,7 @@ class OtpChallengeController extends Controller
             'auth.otp_code',
             'auth.otp_expires_at',
             'auth.otp_attempts',
+            'auth.otp_method',
         ]);
     }
 }

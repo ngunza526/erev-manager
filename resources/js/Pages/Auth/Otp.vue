@@ -1,10 +1,16 @@
 <script setup>
+import { computed } from 'vue';
 import { useForm, usePage } from '@inertiajs/vue3';
 import TextInput from '../../Components/TextInput.vue';
 
+const props = defineProps({ method: { type: String, default: 'email' } });
 const page = usePage();
 const form = useForm({ code: '' });
 const submit = () => form.post('/otp', { preserveScroll: true });
+
+const hint = computed(() => props.method === 'totp'
+  ? "Saisissez le code a 6 chiffres affiche par votre application d'authentification."
+  : 'Saisissez le code a 6 chiffres genere pour cette tentative de connexion.');
 </script>
 
 <template>
@@ -18,7 +24,7 @@ const submit = () => form.post('/otp', { preserveScroll: true });
       <div>
         <p class="eyebrow">Verification</p>
         <h1>Code OTP</h1>
-        <p class="muted">Saisissez le code a 6 chiffres genere pour cette tentative de connexion.</p>
+        <p class="muted">{{ hint }}</p>
       </div>
 
       <p v-if="page.props.flash?.success" class="flash">{{ page.props.flash.success }}</p>

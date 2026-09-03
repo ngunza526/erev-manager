@@ -6,6 +6,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\OtpChallengeController;
 use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\ChartOfAccountController;
 use App\Http\Controllers\ChurchController;
@@ -55,6 +56,12 @@ Route::middleware('throttle:public-form')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::post('workspace/switch', [WorkspaceContextController::class, 'update'])->name('workspace.switch');
+
+    // 2FA par application d'authentification (TOTP) — chaque utilisateur gere la sienne.
+    Route::get('securite/authentification', [TwoFactorController::class, 'show'])->name('security.two-factor');
+    Route::post('securite/authentification', [TwoFactorController::class, 'start'])->name('security.two-factor.start');
+    Route::post('securite/authentification/confirmer', [TwoFactorController::class, 'confirm'])->name('security.two-factor.confirm');
+    Route::delete('securite/authentification', [TwoFactorController::class, 'destroy'])->name('security.two-factor.destroy');
 
     // Le tableau de bord (KPI scopes par perimetre) reste accessible a tout
     // utilisateur authentifie ; le detail affiche depend du role.

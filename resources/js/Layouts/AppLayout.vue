@@ -24,6 +24,14 @@ const churchPrimaryNav = [
   { key: 'communications', href: '/communications', label: 'Messages', icon: 'N' },
 ];
 
+const accountNavSection = {
+  key: 'compte',
+  label: 'Mon compte',
+  items: [
+    { href: '/securite/authentification', label: 'Authentification 2FA' },
+  ],
+};
+
 const communityNavSections = [
   {
     key: 'organisation',
@@ -35,6 +43,7 @@ const communityNavSections = [
       { href: '/journal-audit', label: "Journal d'audit" },
     ],
   },
+  accountNavSection,
 ];
 
 const churchNavSections = [
@@ -105,6 +114,7 @@ const churchNavSections = [
       { href: '/solutions', label: 'Solutions' },
     ],
   },
+  accountNavSection,
 ];
 
 const currentUrl = computed(() => page.url);

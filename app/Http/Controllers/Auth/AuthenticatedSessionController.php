@@ -39,18 +39,30 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
+        // Application d'authentification (TOTP) : le code est time-based, aucun
+        // envoi ; on laisse 10 min pour terminer la connexion.
+        if ($user->hasTotpEnabled()) {
+            $request->session()->put('auth.pending_user_id', $user->id);
+            $request->session()->put('auth.otp_attempts', 0);
+            $request->session()->put('auth.otp_method', 'totp');
+            $request->session()->put('auth.otp_expires_at', now()->addMinutes(10)->getTimestamp());
+
+            return redirect()->route('otp.create')
+                ->with('success', "Saisissez le code affiche par votre application d'authentification.");
+        }
+
+        // Sinon : code a usage unique envoye par email (B2). L'envoi d'abord :
+        // un echec (hors demo) interrompt la connexion avant tout ecrit en session.
         $ttlSeconds = (int) config('auth.otp_ttl', 300);
         $otp = (string) random_int(100000, 999999);
 
-        // B2 : livraison du code par email. En mode demo l'echec est tolere
-        // (le code reste affiche a l'ecran) ; hors demo, un envoi impossible
-        // interrompt la connexion — sans code recu, impossible de continuer.
         $this->deliverOtp($user, $otp, (int) ceil($ttlSeconds / 60));
 
         $request->session()->put('auth.pending_user_id', $user->id);
+        $request->session()->put('auth.otp_attempts', 0);
+        $request->session()->put('auth.otp_method', 'email');
         $request->session()->put('auth.otp_code', $otp);
         $request->session()->put('auth.otp_expires_at', now()->addSeconds($ttlSeconds)->getTimestamp());
-        $request->session()->put('auth.otp_attempts', 0);
 
         $redirect = redirect()->route('otp.create');
 

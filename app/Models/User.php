@@ -53,7 +53,15 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'otp_verified_at' => 'datetime',
+            // Secret TOTP (application d'authentification) chiffre au repos.
+            'otp_secret' => 'encrypted',
         ];
+    }
+
+    /** Une application d'authentification (TOTP) est configuree et confirmee. */
+    public function hasTotpEnabled(): bool
+    {
+        return filled($this->otp_secret);
     }
 
     public function member(): BelongsTo

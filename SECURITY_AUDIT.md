@@ -42,6 +42,11 @@ invalidation et retour au login) ; `hash_equals` ; re-verification du statut.
 Livraison du code par email hors mode demo
 (`EmailOtpCodeNotification`, transport `MAIL_*`) — un envoi impossible
 interrompt la connexion ; en mode demo l'echec est tolere.
+Option renforcee : 2FA par application d'authentification (TOTP, RFC 6238,
+`App\Support\Totp` + `users.otp_secret` chiffre). Quand elle est activee par
+l'utilisateur (`/securite/authentification`), elle remplace le code email a la
+connexion ; activation confirmee par un code valide, desactivation protegee par
+le mot de passe.
 
 ## SEC-22 — Upload media : aucun controle de type de fichier · Haute
 
