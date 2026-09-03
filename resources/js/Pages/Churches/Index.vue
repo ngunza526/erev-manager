@@ -1,5 +1,5 @@
 <script setup>
-import { reactive } from 'vue';
+import { reactive, ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import TextInput from '../../Components/TextInput.vue';
@@ -7,7 +7,7 @@ import Pagination from '../../Components/Pagination.vue';
 
 defineProps({ churches: Object, communities: Array });
 
-const form = reactive({
+const blank = () => ({
   community_id: '',
   designation: '',
   address_number: '',
@@ -20,7 +20,38 @@ const form = reactive({
   phone: '',
 });
 
-const submit = () => router.post('/eglises', form, { preserveScroll: true });
+const form = reactive(blank());
+const editingId = ref(null);
+const isEditing = computed(() => editingId.value !== null);
+
+const startEdit = (church) => {
+  editingId.value = church.id;
+  Object.assign(form, blank(), {
+    community_id: church.community_id ?? '',
+    designation: church.designation ?? '',
+    address_number: church.address_number ?? '',
+    address_avenue: church.address_avenue ?? '',
+    address_district: church.address_district ?? '',
+    address_city: church.address_city ?? '',
+    address_province: church.address_province ?? '',
+    address_country: church.address_country ?? 'RDC',
+    email: church.email ?? '',
+    phone: church.phone ?? '',
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+const cancelEdit = () => {
+  editingId.value = null;
+  Object.assign(form, blank());
+};
+
+const submit = () => {
+  const done = { preserveScroll: true, onSuccess: cancelEdit };
+  isEditing.value
+    ? router.put(`/eglises/${editingId.value}`, form, done)
+    : router.post('/eglises', form, { preserveScroll: true });
+};
 
 const address = (church) => [
   church.address_number || 's/n',
@@ -32,13 +63,12 @@ const address = (church) => [
 <template>
   <AppLayout title="Eglises">
     <div class="grid">
-      <!-- 1. Formulaire pleine largeur -->
       <form class="panel form" @submit.prevent="submit">
-        <h2>Nouvelle eglise</h2>
+        <h2>{{ isEditing ? 'Modifier l\'eglise' : 'Nouvelle eglise' }}</h2>
         <div class="egl-grid">
           <label>
             Communaute
-            <select v-model="form.community_id" required>
+            <select v-model="form.community_id" required :disabled="isEditing">
               <option value="">Choisir</option>
               <option v-for="community in communities" :key="community.id" :value="community.id">{{ community.designation }}</option>
             </select>
@@ -53,27 +83,30 @@ const address = (church) => [
           <TextInput v-model="form.email" label="Email" type="email" />
           <TextInput v-model="form.phone" label="Telephone" />
         </div>
-        <button class="btn">Rattacher</button>
+        <div class="egl-actions">
+          <button class="btn">{{ isEditing ? 'Enregistrer' : 'Rattacher' }}</button>
+          <button v-if="isEditing" class="btn secondary" type="button" @click="cancelEdit">Annuler</button>
+        </div>
       </form>
 
-      <!-- 2. Eglises locales : liste paginee pleine largeur -->
       <section class="panel">
         <h2>Eglises locales <small>{{ churches.total }} au total</small></h2>
         <div class="egl-table-wrap">
           <table class="egl-table">
             <thead>
-              <tr><th>Designation</th><th>Communaute</th><th>Ville</th><th>Adresse</th><th>Membres</th><th>Telephone</th></tr>
+              <tr><th>Designation</th><th>Communaute</th><th>Ville</th><th>Adresse</th><th>Membres</th><th>Telephone</th><th></th></tr>
             </thead>
             <tbody>
-              <tr v-for="church in churches.data" :key="church.id">
+              <tr v-for="church in churches.data" :key="church.id" :class="{ 'is-editing': church.id === editingId }">
                 <td><strong>{{ church.designation }}</strong></td>
                 <td>{{ church.community?.designation ?? '—' }}</td>
                 <td>{{ church.address_city }}</td>
                 <td>{{ address(church) }}</td>
                 <td>{{ church.members_count }}</td>
                 <td>{{ church.phone || '—' }}</td>
+                <td><button class="btn secondary sm" type="button" @click="startEdit(church)">Modifier</button></td>
               </tr>
-              <tr v-if="!churches.data.length"><td colspan="6">Aucune eglise.</td></tr>
+              <tr v-if="!churches.data.length"><td colspan="7">Aucune eglise.</td></tr>
             </tbody>
           </table>
         </div>
@@ -91,6 +124,8 @@ const address = (church) => [
   align-items: end;
 }
 
+.egl-actions { display: flex; gap: 10px; }
+
 .egl-table-wrap { overflow-x: auto; }
 .egl-table { width: 100%; border-collapse: collapse; }
 .egl-table th,
@@ -102,4 +137,7 @@ const address = (church) => [
 }
 .egl-table th { color: var(--muted); font-size: 12px; text-transform: uppercase; font-weight: 950; white-space: nowrap; }
 .egl-table tr:last-child td { border-bottom: 0; }
+.egl-table tr.is-editing { background: var(--blue-soft); }
+
+.btn.sm { min-height: 30px; padding: 0 10px; font-size: 12px; }
 </style>

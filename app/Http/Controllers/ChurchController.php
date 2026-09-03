@@ -45,4 +45,29 @@ class ChurchController extends Controller
 
         return back()->with('success', 'Eglise rattachee a la communaute.');
     }
+
+    public function update(Request $request, Church $eglise, AccessScope $scope): RedirectResponse
+    {
+        $scope->ensureChurchAllowed($request->user(), (int) $eglise->id);
+
+        // Le rattachement a la communaute n'est pas modifiable ici.
+        $data = $request->validate([
+            'designation' => ['required', 'string', 'max:255'],
+            'address_number' => ['nullable', 'string', 'max:80'],
+            'address_avenue' => ['nullable', 'string', 'max:255'],
+            'address_district' => ['required', 'string', 'max:255'],
+            'address_city' => ['required', 'string', 'max:255'],
+            'address_province' => ['required', 'string', 'max:255'],
+            'address_country' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:80'],
+        ]);
+
+        $before = $eglise->only(array_keys($data));
+        $eglise->update($data);
+
+        Audit::record('reference.church.updated', $eglise, ['from' => $before, 'to' => $data]);
+
+        return back()->with('success', 'Eglise mise a jour.');
+    }
 }
