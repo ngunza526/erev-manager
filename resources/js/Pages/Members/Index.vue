@@ -54,6 +54,12 @@ const submit = () => {
 
 const promote = (member, status) => router.patch(`/membres/${member.id}/statut`, { status }, { preserveScroll: true });
 const fullName = (member) => `${member.last_name} ${member.middle_name} ${member.first_name}`;
+
+const remove = (member) => {
+  if (window.confirm(`Supprimer le membre "${fullName(member)}" ?`)) {
+    router.delete(`/membres/${member.id}`, { preserveScroll: true, onSuccess: () => (member.id === editingId.value ? cancelEdit() : null) });
+  }
+};
 </script>
 
 <template>
@@ -103,19 +109,20 @@ const fullName = (member) => `${member.last_name} ${member.middle_name} ${member
                 <td><strong>{{ fullName(member) }}</strong></td>
                 <td>{{ member.church?.designation ?? '—' }}</td>
                 <td>{{ member.profession }}</td>
-                <td><span class="tag">{{ member.status }}</span></td>
-                <td class="mbr-row-actions">
-                  <button class="btn secondary sm" type="button" @click="startEdit(member)">Modifier</button>
-                  <button
-                    v-for="status in statuses"
-                    :key="status"
-                    class="btn secondary sm"
-                    type="button"
-                    :disabled="status === member.status"
-                    @click="promote(member, status)"
+                <td>
+                  <select
+                    class="mbr-status"
+                    :value="member.status"
+                    @change="promote(member, $event.target.value)"
                   >
-                    → {{ status }}
-                  </button>
+                    <option v-for="status in statuses" :key="status" :value="status">{{ status }}</option>
+                  </select>
+                </td>
+                <td>
+                  <div class="row-actions">
+                    <button class="icon-action is-blue" type="button" title="Modifier" @click="startEdit(member)"><i class="bi bi-pencil-square" /></button>
+                    <button class="icon-action is-red" type="button" title="Supprimer" @click="remove(member)"><i class="bi bi-trash" /></button>
+                  </div>
                 </td>
               </tr>
               <tr v-if="!members.data.length"><td colspan="5">Aucun membre.</td></tr>
@@ -152,6 +159,5 @@ const fullName = (member) => `${member.last_name} ${member.middle_name} ${member
 .mbr-table tr:last-child td { border-bottom: 0; }
 .mbr-table tr.is-editing { background: var(--blue-soft); }
 
-.mbr-row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.btn.sm { min-height: 30px; padding: 0 10px; font-size: 12px; }
+.mbr-status { width: auto; min-width: 130px; min-height: 34px; }
 </style>

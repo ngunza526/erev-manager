@@ -207,4 +207,82 @@ class EntityUpdateTest extends TestCase
 
         $this->assertSame('actif', $admin->fresh()->status);
     }
+
+    // --- Suppression -------------------------------------------------------
+
+    public function test_a_community_with_churches_cannot_be_deleted(): void
+    {
+        $platform = $this->user(Rbac::SUPERADMIN_PLATEFORME, Rbac::LEVEL_PLATFORM, null, null);
+
+        $this->actingAs($platform)->delete("/communautes/{$this->community->id}")->assertStatus(422);
+        $this->assertDatabaseHas('communities', ['id' => $this->community->id]);
+    }
+
+    public function test_an_empty_community_can_be_deleted(): void
+    {
+        $platform = $this->user(Rbac::SUPERADMIN_PLATEFORME, Rbac::LEVEL_PLATFORM, null, null);
+        $empty = Community::create([
+            'designation' => 'Communaute Vide', 'headquarters_city' => 'X',
+            'headquarters_province' => 'X', 'headquarters_country' => 'RDC',
+            'authorization_number' => 'AUT-UPD-EMPTY',
+        ]);
+
+        $this->actingAs($platform)->delete("/communautes/{$empty->id}")->assertRedirect();
+        $this->assertDatabaseMissing('communities', ['id' => $empty->id]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'reference.community.deleted']);
+    }
+
+    public function test_a_church_with_members_cannot_be_deleted(): void
+    {
+        Member::create([...$this->memberPayload($this->church->id), 'status' => MemberStatus::Sympathisant->value]);
+
+        $this->actingAs($this->administrateur())->delete("/eglises/{$this->church->id}")->assertStatus(422);
+        $this->assertDatabaseHas('churches', ['id' => $this->church->id]);
+    }
+
+    public function test_an_empty_church_can_be_deleted_in_scope(): void
+    {
+        $empty = Church::create([
+            'community_id' => $this->community->id, 'designation' => 'Eglise Vide',
+            'address_district' => 'X', 'address_city' => 'X',
+            'address_province' => 'X', 'address_country' => 'RDC',
+        ]);
+
+        $this->actingAs($this->administrateur())->delete("/eglises/{$empty->id}")->assertRedirect();
+        $this->assertDatabaseMissing('churches', ['id' => $empty->id]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'reference.church.deleted']);
+    }
+
+    public function test_secretaire_deletes_a_member_in_scope(): void
+    {
+        $member = Member::create([...$this->memberPayload($this->church->id), 'status' => MemberStatus::Sympathisant->value]);
+
+        $this->actingAs($this->secretaire())->delete("/membres/{$member->id}")->assertRedirect();
+        $this->assertDatabaseMissing('members', ['id' => $member->id]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'member.deleted']);
+    }
+
+    public function test_administrateur_deletes_and_toggles_a_user_account(): void
+    {
+        $target = $this->user(Rbac::CAISSIER, Rbac::LEVEL_EGLISE, $this->church->id, $this->community->id);
+        $admin = $this->administrateur();
+
+        $this->actingAs($admin)->patch("/utilisateurs/{$target->id}/statut")->assertRedirect();
+        $this->assertSame('suspendu', $target->fresh()->status);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'user.status_changed']);
+
+        $this->actingAs($admin)->delete("/utilisateurs/{$target->id}")->assertRedirect();
+        $this->assertDatabaseMissing('users', ['id' => $target->id]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'user.deleted']);
+    }
+
+    public function test_admin_cannot_delete_or_suspend_its_own_account(): void
+    {
+        $admin = $this->administrateur();
+
+        $this->actingAs($admin)->delete("/utilisateurs/{$admin->id}")->assertStatus(422);
+        $this->actingAs($admin)->patch("/utilisateurs/{$admin->id}/statut")->assertStatus(422);
+
+        $this->assertDatabaseHas('users', ['id' => $admin->id, 'status' => 'actif']);
+    }
 }

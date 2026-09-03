@@ -53,6 +53,12 @@ const submit = () => {
     ? router.put(`/communautes/${editingId.value}`, form, { preserveScroll: true, onSuccess: cancelEdit })
     : router.post('/communautes', form, { preserveScroll: true });
 };
+
+const remove = (community) => {
+  if (window.confirm(`Supprimer la communaute "${community.designation}" ?`)) {
+    router.delete(`/communautes/${community.id}`, { preserveScroll: true, onSuccess: () => (community.id === editingId.value ? cancelEdit() : null) });
+  }
+};
 </script>
 
 <template>
@@ -93,7 +99,12 @@ const submit = () => {
                 <td>{{ community.headquarters_city }}, {{ community.headquarters_province }}</td>
                 <td>{{ community.churches_count }}</td>
                 <td>{{ community.phone || '—' }}</td>
-                <td><button class="btn secondary sm" type="button" @click="startEdit(community)">Modifier</button></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="icon-action is-blue" type="button" title="Modifier" @click="startEdit(community)"><i class="bi bi-pencil-square" /></button>
+                    <button class="icon-action is-red" type="button" title="Supprimer" @click="remove(community)"><i class="bi bi-trash" /></button>
+                  </div>
+                </td>
               </tr>
               <tr v-if="!communities.data.length"><td colspan="6">Aucune communaute.</td></tr>
             </tbody>

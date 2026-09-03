@@ -70,4 +70,18 @@ class ChurchController extends Controller
 
         return back()->with('success', 'Eglise mise a jour.');
     }
+
+    public function destroy(Request $request, Church $eglise, AccessScope $scope): RedirectResponse
+    {
+        $scope->ensureChurchAllowed($request->user(), (int) $eglise->id);
+
+        abort_if($eglise->members()->exists(), 422, 'Impossible de supprimer une eglise qui compte des membres.');
+
+        $snapshot = ['designation' => $eglise->designation, 'community_id' => (int) $eglise->community_id];
+        $eglise->delete();
+
+        Audit::record('reference.church.deleted', $eglise, $snapshot);
+
+        return back()->with('success', 'Eglise supprimee.');
+    }
 }

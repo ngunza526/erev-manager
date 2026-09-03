@@ -171,6 +171,41 @@ class UserManagementController extends Controller
         return back()->with('success', 'Utilisateur mis a jour.');
     }
 
+    public function toggleStatus(Request $request, User $utilisateur, AccessScope $scope): RedirectResponse
+    {
+        $this->ensureManageable($request, $utilisateur, $scope, 'Vous ne pouvez pas changer le statut de votre propre compte.');
+
+        $status = $utilisateur->status === 'actif' ? 'suspendu' : 'actif';
+        $utilisateur->update(['status' => $status]);
+
+        Audit::record('user.status_changed', $utilisateur, ['status' => $status], $utilisateur->church_id ? (int) $utilisateur->church_id : null);
+
+        return back()->with('success', "Compte {$status}.");
+    }
+
+    public function destroy(Request $request, User $utilisateur, AccessScope $scope): RedirectResponse
+    {
+        $this->ensureManageable($request, $utilisateur, $scope, 'Vous ne pouvez pas supprimer votre propre compte.');
+
+        $snapshot = ['email' => $utilisateur->email, 'level' => $utilisateur->level];
+        $utilisateur->delete();
+
+        Audit::record('user.deleted', $utilisateur, $snapshot);
+
+        return back()->with('success', 'Compte supprime.');
+    }
+
+    private function ensureManageable(Request $request, User $utilisateur, AccessScope $scope, string $selfMessage): void
+    {
+        abort_if($utilisateur->id === $request->user()->id, 422, $selfMessage);
+
+        if ($utilisateur->church_id) {
+            $scope->ensureChurchAllowed($request->user(), (int) $utilisateur->church_id);
+        } elseif ($utilisateur->community_id) {
+            $scope->ensureCommunityAllowed($request->user(), (int) $utilisateur->community_id);
+        }
+    }
+
     /**
      * Roles attribuables via l'interface, par niveau de compte.
      * Le role technique "SuperAdmin plateforme" n'est jamais propose ici.

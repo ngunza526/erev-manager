@@ -78,6 +78,13 @@ const submit = () => {
 const spaceLabel = (level) => (level === 'coordination' ? 'Communaute' : 'Eglise');
 const roleNames = (user) => (user.roles || []).map((role) => role.name).join(', ') || '—';
 const scopeLabel = (user) => user.church?.designation ?? user.community?.designation ?? 'communaute';
+
+const toggleStatus = (user) => router.patch(`/utilisateurs/${user.id}/statut`, {}, { preserveScroll: true });
+const remove = (user) => {
+  if (window.confirm(`Supprimer le compte "${user.email}" ?`)) {
+    router.delete(`/utilisateurs/${user.id}`, { preserveScroll: true, onSuccess: () => (user.id === editingId.value ? cancelEdit() : null) });
+  }
+};
 </script>
 
 <template>
@@ -154,7 +161,21 @@ const scopeLabel = (user) => user.church?.designation ?? user.community?.designa
                 <td>{{ roleNames(user) }}</td>
                 <td>{{ scopeLabel(user) }}</td>
                 <td><span class="tag" :class="{ gold: user.status !== 'actif' }">{{ user.status }}</span></td>
-                <td><button class="btn secondary sm" type="button" @click="startEdit(user)">Modifier</button></td>
+                <td>
+                  <div class="row-actions">
+                    <button
+                      class="icon-action is-green"
+                      :class="{ 'is-on': user.status === 'actif' }"
+                      type="button"
+                      :title="user.status === 'actif' ? 'Suspendre' : 'Reactiver'"
+                      @click="toggleStatus(user)"
+                    >
+                      <i :class="user.status === 'actif' ? 'bi bi-toggle-on' : 'bi bi-toggle-off'" />
+                    </button>
+                    <button class="icon-action is-blue" type="button" title="Modifier" @click="startEdit(user)"><i class="bi bi-pencil-square" /></button>
+                    <button class="icon-action is-red" type="button" title="Supprimer" @click="remove(user)"><i class="bi bi-trash" /></button>
+                  </div>
+                </td>
               </tr>
               <tr v-if="!users.data.length"><td colspan="7">Aucun compte.</td></tr>
             </tbody>

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "bootstrap/dist/css/bootstrap.min.css";
+@import "bootstrap-icons/font/bootstrap-icons.css";
 
 :root {
   --ink: #172033;
@@ -328,6 +329,31 @@ textarea { min-height: 96px; padding: 10px 12px; resize: vertical; }
 
 .btn:hover { background: var(--blue-dark); }
 .btn.secondary { background: var(--blue-soft); color: var(--blue-dark); }
+
+/* Boutons d'action en icone (Bootstrap Icons), code couleur par action. */
+.icon-action {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.icon-action:disabled { opacity: .45; cursor: not-allowed; }
+.icon-action.is-green { color: var(--green); }
+.icon-action.is-green:hover:not(:disabled) { background: #ecfdf3; border-color: var(--green); }
+.icon-action.is-blue { color: var(--blue-dark); }
+.icon-action.is-blue:hover:not(:disabled) { background: var(--blue-soft); border-color: var(--blue); }
+.icon-action.is-red { color: var(--danger); }
+.icon-action.is-red:hover:not(:disabled) { background: #fef3f2; border-color: var(--danger); }
+.icon-action.is-on { background: #ecfdf3; border-color: var(--green); }
+
+.row-actions { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 
 .list { display: grid; gap: 10px; }
 .item { padding: 14px; }

@@ -53,6 +53,22 @@ class CommunityController extends Controller
         return back()->with('success', 'Communaute mise a jour.');
     }
 
+    public function destroy(Request $request, Community $communaute, AccessScope $scope): RedirectResponse
+    {
+        if ($request->user()?->level === 'coordination') {
+            $scope->ensureCommunityAllowed($request->user(), $communaute->id);
+        }
+
+        abort_if($communaute->churches()->exists(), 422, 'Impossible de supprimer une communaute qui contient des eglises.');
+
+        $snapshot = ['designation' => $communaute->designation, 'authorization_number' => $communaute->authorization_number];
+        $communaute->delete();
+
+        Audit::record('reference.community.deleted', $communaute, $snapshot);
+
+        return back()->with('success', 'Communaute supprimee.');
+    }
+
     private function validated(Request $request, ?Community $community = null): array
     {
         return $request->validate([

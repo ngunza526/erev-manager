@@ -69,13 +69,14 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('workspace:communaute')->group(function () {
         Route::middleware('permission:'.Rbac::PLATFORM_TENANTS)->group(function () {
-            Route::resource('communautes', CommunityController::class)->only(['index', 'store', 'update']);
+            Route::resource('communautes', CommunityController::class)->only(['index', 'store', 'update', 'destroy']);
         });
         Route::middleware('permission:'.Rbac::CHURCHES_MANAGE)->group(function () {
-            Route::resource('eglises', ChurchController::class)->only(['index', 'store', 'update']);
+            Route::resource('eglises', ChurchController::class)->only(['index', 'store', 'update', 'destroy']);
         });
         Route::middleware('permission:'.Rbac::USERS_MANAGE)->group(function () {
-            Route::resource('utilisateurs', UserManagementController::class)->only(['index', 'store', 'update']);
+            Route::resource('utilisateurs', UserManagementController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::patch('utilisateurs/{utilisateur}/statut', [UserManagementController::class, 'toggleStatus'])->name('utilisateurs.status');
         });
         Route::middleware('permission:'.Rbac::ROLES_MANAGE)->group(function () {
             Route::get('roles-permissions', [RolePermissionController::class, 'index'])->name('roles-permissions.index');
@@ -93,7 +94,7 @@ Route::middleware('auth')->group(function () {
             ->name('offline.sync');
 
         Route::middleware('permission:'.Rbac::MEMBERS_MANAGE)->group(function () {
-            Route::resource('membres', MemberController::class)->only(['index', 'store', 'update']);
+            Route::resource('membres', MemberController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::patch('membres/{member}/statut', [MemberController::class, 'promote'])->name('membres.promote');
         });
 

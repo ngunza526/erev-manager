@@ -85,6 +85,21 @@ class MemberController extends Controller
         return back()->with('success', 'Membre mis a jour.');
     }
 
+    public function destroy(Request $request, Member $membre, AccessScope $scope): RedirectResponse
+    {
+        $scope->ensureChurchAllowed($request->user(), (int) $membre->church_id);
+
+        $snapshot = [
+            'name' => trim("{$membre->last_name} {$membre->middle_name} {$membre->first_name}"),
+            'church_id' => (int) $membre->church_id,
+        ];
+        $membre->delete();
+
+        Audit::record('member.deleted', $membre, $snapshot);
+
+        return back()->with('success', 'Membre supprime.');
+    }
+
     public function promote(Request $request, Member $member, AccessScope $scope): RedirectResponse
     {
         $scope->ensureChurchAllowed($request->user(), (int) $member->church_id);
