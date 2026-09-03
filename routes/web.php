@@ -5,6 +5,7 @@ use App\Http\Controllers\AdvancedChurchModuleController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\OtpChallengeController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\ChartOfAccountController;
 use App\Http\Controllers\ChurchController;
@@ -33,6 +34,12 @@ Route::middleware('guest')->group(function () {
     Route::post('login', [AuthenticatedSessionController::class, 'store'])->middleware('throttle:login')->name('login.store');
     Route::get('otp', [OtpChallengeController::class, 'create'])->name('otp.create');
     Route::post('otp', [OtpChallengeController::class, 'store'])->middleware('throttle:otp')->name('otp.store');
+
+    // Reinitialisation de mot de passe (NB4).
+    Route::get('mot-de-passe/oubli', [PasswordResetController::class, 'requestForm'])->name('password.request');
+    Route::post('mot-de-passe/oubli', [PasswordResetController::class, 'sendLink'])->middleware('throttle:password-reset')->name('password.email');
+    Route::get('mot-de-passe/reinitialiser/{token}', [PasswordResetController::class, 'resetForm'])->name('password.reset');
+    Route::post('mot-de-passe/reinitialiser', [PasswordResetController::class, 'update'])->middleware('throttle:password-reset')->name('password.update');
 });
 
 Route::get('public/eglises/{church}/don', [PublicFlowController::class, 'donation'])->name('public.donation');
