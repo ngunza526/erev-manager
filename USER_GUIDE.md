@@ -4,7 +4,7 @@
 
 Compte de demonstration apres seed:
 
-- Email: `admin@ereve.cd`
+- Email: `proispos1@egmail.com`
 - Mot de passe: `password`
 
 Le login utilise un challenge OTP local de demonstration. En production, configurez le transport email/SMS approprie.

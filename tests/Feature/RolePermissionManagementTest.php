@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use Database\Seeders\EreveSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -16,7 +15,7 @@ class RolePermissionManagementTest extends TestCase
     public function test_authenticated_user_can_view_role_permission_page(): void
     {
         $this->seed(EreveSeeder::class);
-        $user = User::where('email', 'admin@ereve.cd')->firstOrFail();
+        $user = $this->seededAdministrateur();
 
         $this->actingAs($user)->get('/roles-permissions')->assertOk();
     }
@@ -24,7 +23,7 @@ class RolePermissionManagementTest extends TestCase
     public function test_permission_and_role_can_be_created_and_synced(): void
     {
         $this->seed(EreveSeeder::class);
-        $user = User::where('email', 'admin@ereve.cd')->firstOrFail();
+        $user = $this->seededAdministrateur();
 
         $this->actingAs($user)->post('/roles-permissions/permissions', [
             'name' => 'counseling.confidentiel',

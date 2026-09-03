@@ -120,7 +120,7 @@ class EreveSeeder extends Seeder
             'phone' => '+243990000101',
         ]);
 
-        User::firstOrCreate(['email' => 'admin@ereve.cd'], [
+        User::firstOrCreate(['email' => 'proispos1@egmail.com'], [
             'name' => 'Administrateur eReve',
             'password' => Hash::make('password'),
             'member_id' => null,

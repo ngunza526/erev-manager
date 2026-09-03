@@ -36,7 +36,7 @@ class NavigationIntegrityTest extends TestCase
     {
         $this->seed(EreveSeeder::class);
 
-        $communityUser = User::where('email', 'admin@ereve.cd')->firstOrFail();
+        $communityUser = $this->seededAdministrateur();
         $churchUser = User::where('email', 'eglise.admin@ereve.cd')->firstOrFail();
         $links = $this->layoutLinks();
         $communityLinks = ['/communautes', '/eglises', '/utilisateurs', '/roles-permissions', '/journal-audit'];

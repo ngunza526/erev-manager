@@ -45,7 +45,7 @@ const submit = () => form.post('/login', { preserveScroll: true });
         <Link href="/mot-de-passe/oubli" class="muted auth-hint">Mot de passe oublie ?</Link>
       </form>
 
-      <p class="muted auth-hint">Compte de demonstration apres seed: admin@ereve.cd / password.</p>
+      <p class="muted auth-hint">Utilisez le compte fourni par votre administrateur.</p>
     </section>
   </main>
 </template>

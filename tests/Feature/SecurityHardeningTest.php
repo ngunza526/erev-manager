@@ -229,7 +229,7 @@ class SecurityHardeningTest extends TestCase
     public function test_weak_password_is_rejected_on_user_creation(): void
     {
         $this->seed(EreveSeeder::class);
-        $admin = User::where('email', 'admin@ereve.cd')->firstOrFail();
+        $admin = $this->seededAdministrateur();
 
         $this->actingAs($admin)->post('/utilisateurs', [
             'name' => 'Faible',

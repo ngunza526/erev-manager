@@ -6,7 +6,6 @@ use App\Models\ChartOfAccount;
 use App\Models\Church;
 use App\Models\JournalEntry;
 use App\Models\Member;
-use App\Models\User;
 use Database\Seeders\EreveSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -24,7 +23,7 @@ class CleanSeedStateTest extends TestCase
         $this->assertGreaterThan(0, Church::count());
         $this->assertGreaterThan(0, ChartOfAccount::count());
 
-        $admin = User::where('email', 'admin@ereve.cd')->firstOrFail();
+        $admin = $this->seededAdministrateur();
         $this->assertNull($admin->member_id);
         $this->assertSame('coordination', $admin->level);
         $this->assertSame('actif', $admin->status);

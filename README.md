@@ -75,7 +75,7 @@ php artisan serve --host=127.0.0.1 --port=8088
 
 Compte de demonstration:
 
-- Email: `admin@ereve.cd`
+- Email: `proispos1@egmail.com`
 - Mot de passe: `password`
 
 ## Verification avant livraison

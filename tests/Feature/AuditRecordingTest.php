@@ -29,7 +29,7 @@ class AuditRecordingTest extends TestCase
 
     public function test_reference_creation_is_audited(): void
     {
-        $admin = User::where('email', 'admin@ereve.cd')->firstOrFail();
+        $admin = $this->seededAdministrateur();
         $platform = User::where('email', 'plateforme@ereve.cd')->firstOrFail();
         $community = $admin->community;
 
