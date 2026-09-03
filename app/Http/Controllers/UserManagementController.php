@@ -27,7 +27,7 @@ class UserManagementController extends Controller
 
         return Inertia::render('Users/Index', [
             'workspace' => $workspace->space($request->user(), $request),
-            'users' => User::with('member:id,last_name,middle_name,first_name,church_id', 'church:id,designation', 'community:id,designation')
+            'users' => User::with('member:id,last_name,middle_name,first_name,church_id', 'church:id,designation', 'community:id,designation', 'roles:id,name')
                 ->when(is_array($churchIds), fn ($query) => $query->where(function ($inner) use ($churchIds, $communityIds) {
                     $inner->whereIn('church_id', $churchIds);
                     if (is_array($communityIds)) {
@@ -35,7 +35,8 @@ class UserManagementController extends Controller
                     }
                 }))
                 ->latest()
-                ->paginate(12),
+                ->paginate(12)
+                ->withQueryString(),
             'members' => Member::where('status', MemberStatus::Effectif->value)
                 ->when(is_array($churchIds), fn ($query) => $query->whereIn('church_id', $churchIds))
                 ->with('church:id,designation,community_id')

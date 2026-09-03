@@ -3,6 +3,7 @@ import { reactive, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import TextInput from '../../Components/TextInput.vue';
+import Pagination from '../../Components/Pagination.vue';
 
 const props = defineProps({
   users: Object,
@@ -33,66 +34,107 @@ watch(() => form.level, () => {
 });
 
 const submit = () => router.post('/utilisateurs', form, { preserveScroll: true });
+
+const spaceLabel = (level) => (level === 'coordination' ? 'Communaute' : 'Eglise');
+const roleNames = (user) => (user.roles || []).map((role) => role.name).join(', ') || '—';
+const scopeLabel = (user) => user.church?.designation ?? user.community?.designation ?? 'communaute';
 </script>
 
 <template>
   <AppLayout title="Utilisateurs">
-    <div class="grid two">
+    <div class="grid">
+      <!-- 1. Formulaire sur toute la largeur -->
       <form class="panel form" @submit.prevent="submit">
         <h2>Nouvel utilisateur</h2>
-        <label>
-          Espace
-          <select v-model="form.level">
-            <option value="coordination">Communaute</option>
-            <option value="eglise">Eglise</option>
-          </select>
-        </label>
-        <TextInput v-model="form.name" label="Nom complet" />
-        <label v-if="form.level === 'coordination'">
-          Communaute
-          <select v-model="form.community_id" required>
-            <option value="">Choisir</option>
-            <option v-for="community in communities" :key="community.id" :value="community.id">{{ community.designation }}</option>
-          </select>
-        </label>
-        <label v-if="form.level === 'eglise'">
-          Eglise
-          <select v-model="form.church_id" required>
-            <option value="">Choisir</option>
-            <option v-for="church in churches" :key="church.id" :value="church.id">{{ church.designation }}</option>
-          </select>
-        </label>
-        <label>
-          Membre effectif optionnel
-          <select v-model="form.member_id">
-            <option value="">Aucun</option>
-            <option v-for="member in members" :key="member.id" :value="member.id">
-              {{ member.last_name }} {{ member.middle_name }} {{ member.first_name }} - {{ member.church?.designation }}
-            </option>
-          </select>
-        </label>
-        <TextInput v-model="form.email" label="Login email" type="email" required />
-        <TextInput v-model="form.password" label="Mot de passe" type="password" required />
-        <label>
-          Role
-          <select v-model="form.role" required>
-            <option v-for="role in availableRoles" :key="role">{{ role }}</option>
-          </select>
-        </label>
+        <div class="usr-grid">
+          <label>
+            Espace
+            <select v-model="form.level">
+              <option value="coordination">Communaute</option>
+              <option value="eglise">Eglise</option>
+            </select>
+          </label>
+          <TextInput v-model="form.name" label="Nom complet" />
+          <label v-if="form.level === 'coordination'">
+            Communaute
+            <select v-model="form.community_id" required>
+              <option value="">Choisir</option>
+              <option v-for="community in communities" :key="community.id" :value="community.id">{{ community.designation }}</option>
+            </select>
+          </label>
+          <label v-if="form.level === 'eglise'">
+            Eglise
+            <select v-model="form.church_id" required>
+              <option value="">Choisir</option>
+              <option v-for="church in churches" :key="church.id" :value="church.id">{{ church.designation }}</option>
+            </select>
+          </label>
+          <label>
+            Membre effectif optionnel
+            <select v-model="form.member_id">
+              <option value="">Aucun</option>
+              <option v-for="member in members" :key="member.id" :value="member.id">
+                {{ member.last_name }} {{ member.middle_name }} {{ member.first_name }} - {{ member.church?.designation }}
+              </option>
+            </select>
+          </label>
+          <TextInput v-model="form.email" label="Login email" type="email" required />
+          <TextInput v-model="form.password" label="Mot de passe" type="password" required />
+          <label>
+            Role
+            <select v-model="form.role" required>
+              <option v-for="role in availableRoles" :key="role">{{ role }}</option>
+            </select>
+          </label>
+        </div>
         <button class="btn">Creer</button>
       </form>
+
+      <!-- 2. Comptes, pleine largeur + pagination -->
       <section class="panel">
-        <h2>Comptes</h2>
-        <div class="list">
-          <article v-for="user in users.data" :key="user.id" class="item">
-            <header><strong>{{ user.email }}</strong><small>{{ user.status }}</small></header>
-            <small>{{ user.name }} - {{ user.level === 'coordination' ? 'communaute' : 'eglise' }} - OTP requis</small>
-            <div class="tags">
-              <span class="tag">{{ user.church?.designation ?? user.community?.designation ?? 'communaute' }}</span>
-            </div>
-          </article>
+        <h2>Comptes <small>{{ users.total }} au total</small></h2>
+        <div class="usr-table-wrap">
+          <table class="usr-table">
+            <thead>
+              <tr><th>Email</th><th>Nom</th><th>Espace</th><th>Role</th><th>Perimetre</th><th>Statut</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="user in users.data" :key="user.id">
+                <td><strong>{{ user.email }}</strong></td>
+                <td>{{ user.name }}</td>
+                <td>{{ spaceLabel(user.level) }}</td>
+                <td>{{ roleNames(user) }}</td>
+                <td>{{ scopeLabel(user) }}</td>
+                <td><span class="tag" :class="{ gold: user.status !== 'actif' }">{{ user.status }}</span></td>
+              </tr>
+              <tr v-if="!users.data.length"><td colspan="6">Aucun compte.</td></tr>
+            </tbody>
+          </table>
         </div>
+        <Pagination :meta="users" />
       </section>
     </div>
   </AppLayout>
 </template>
+
+<style scoped>
+.usr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.usr-table-wrap { overflow-x: auto; }
+.usr-table { width: 100%; border-collapse: collapse; }
+.usr-table th,
+.usr-table td {
+  text-align: left;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+  white-space: nowrap;
+}
+.usr-table th { color: var(--muted); font-size: 12px; text-transform: uppercase; font-weight: 950; }
+.usr-table tr:last-child td { border-bottom: 0; }
+</style>
