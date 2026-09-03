@@ -3,6 +3,7 @@ import { computed, reactive } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import TextInput from '../../Components/TextInput.vue';
+import MultiSelect from '../../Components/MultiSelect.vue';
 
 const props = defineProps({ roles: Array, permissions: Array });
 
@@ -45,12 +46,12 @@ const syncRole = (role) => router.put(`/roles-permissions/roles/${role.id}/permi
               <option value="coordination">Coordination</option>
             </select>
           </label>
-          <label>
-            Permissions
-            <select v-model="roleForm.permissions" multiple>
-              <option v-for="permission in permissionNames" :key="permission" :value="permission">{{ permission }}</option>
-            </select>
-          </label>
+          <MultiSelect
+            v-model="roleForm.permissions"
+            :options="permissionNames"
+            label="Permissions"
+            placeholder="Rechercher et ajouter des permissions..."
+          />
           <button class="btn">Creer le role</button>
         </form>
 
