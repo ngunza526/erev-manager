@@ -30,7 +30,7 @@ class AuditRecordingTest extends TestCase
     public function test_reference_creation_is_audited(): void
     {
         $admin = $this->seededAdministrateur();
-        $platform = User::where('email', 'plateforme@ereve.cd')->firstOrFail();
+        $platform = $this->seededSuperAdmin();
         $community = $admin->community;
 
         $this->actingAs($admin)->post('/eglises', [
@@ -72,7 +72,7 @@ class AuditRecordingTest extends TestCase
 
     public function test_chart_of_account_update_and_delete_are_audited(): void
     {
-        $platform = User::where('email', 'plateforme@ereve.cd')->firstOrFail();
+        $platform = $this->seededSuperAdmin();
 
         $this->actingAs($platform)->post('/plan-comptable', [
             'code' => '706200',

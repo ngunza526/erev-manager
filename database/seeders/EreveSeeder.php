@@ -59,7 +59,7 @@ class EreveSeeder extends Seeder
         if (app()->environment('production') && ! filter_var(env('EREVE_ALLOW_DEMO_SEED', false), FILTER_VALIDATE_BOOL)) {
             throw new \RuntimeException(
                 'EreveSeeder est un jeu de demonstration : execution refusee en production. '
-                .'Definir EREVE_ALLOW_DEMO_SEED=true pour forcer.'
+                    .'Definir EREVE_ALLOW_DEMO_SEED=true pour forcer.'
             );
         }
 
@@ -73,13 +73,39 @@ class EreveSeeder extends Seeder
         );
 
         $accounts = [
-            ['101', 'Fonds de dotation', 1, 'credit'], ['106', 'Reserves affectees', 1, 'credit'], ['110', 'Resultat net de l exercice', 1, 'credit'],
-            ['211', 'Terrains de l eglise', 2, 'debit'], ['213', 'Constructions', 2, 'debit'], ['215', 'Materiel audio-visuel', 2, 'debit'], ['218', 'Mobilier et materiel de bureau', 2, 'debit'],
-            ['311', 'Stocks de brochures et bibles', 3, 'debit'], ['312', 'Articles pour vente', 3, 'debit'], ['341', 'Produits alimentaires actions sociales', 3, 'debit'],
-            ['401', 'Fournisseurs', 4, 'credit'], ['411', 'Membres debiteurs', 4, 'debit'], ['421', 'Personnel a payer', 4, 'credit'], ['431', 'CNSS INSS', 4, 'credit'], ['445', 'Etat impots et taxes', 4, 'credit'], ['465', 'Bailleurs de fonds partenaires', 4, 'credit'],
-            ['501', 'Banque principale', 5, 'debit'], ['502', 'Banque projet', 5, 'debit'], ['511', 'Caisse', 5, 'debit'], ['515', 'Monnaie mobile', 5, 'debit'],
-            ['601', 'Achats activites spirituelles', 6, 'debit'], ['611', 'Loyers et charges locatives', 6, 'debit'], ['612', 'Transport et deplacements', 6, 'debit'], ['621', 'Remunerations du personnel', 6, 'debit'], ['631', 'Charges sociales', 6, 'debit'], ['641', 'Dotations amortissements', 6, 'debit'], ['651', 'Charges exceptionnelles', 6, 'debit'],
-            ['701', 'Dimes', 7, 'credit'], ['702', 'Offrandes', 7, 'credit'], ['703', 'Dons recus', 7, 'credit'], ['704', 'Revenus des ventes', 7, 'credit'], ['705', 'Subventions', 7, 'credit'], ['771', 'Produits exceptionnels', 7, 'credit'],
+            ['101', 'Fonds de dotation', 1, 'credit'],
+            ['106', 'Reserves affectees', 1, 'credit'],
+            ['110', 'Resultat net de l exercice', 1, 'credit'],
+            ['211', 'Terrains de l eglise', 2, 'debit'],
+            ['213', 'Constructions', 2, 'debit'],
+            ['215', 'Materiel audio-visuel', 2, 'debit'],
+            ['218', 'Mobilier et materiel de bureau', 2, 'debit'],
+            ['311', 'Stocks de brochures et bibles', 3, 'debit'],
+            ['312', 'Articles pour vente', 3, 'debit'],
+            ['341', 'Produits alimentaires actions sociales', 3, 'debit'],
+            ['401', 'Fournisseurs', 4, 'credit'],
+            ['411', 'Membres debiteurs', 4, 'debit'],
+            ['421', 'Personnel a payer', 4, 'credit'],
+            ['431', 'CNSS INSS', 4, 'credit'],
+            ['445', 'Etat impots et taxes', 4, 'credit'],
+            ['465', 'Bailleurs de fonds partenaires', 4, 'credit'],
+            ['501', 'Banque principale', 5, 'debit'],
+            ['502', 'Banque projet', 5, 'debit'],
+            ['511', 'Caisse', 5, 'debit'],
+            ['515', 'Monnaie mobile', 5, 'debit'],
+            ['601', 'Achats activites spirituelles', 6, 'debit'],
+            ['611', 'Loyers et charges locatives', 6, 'debit'],
+            ['612', 'Transport et deplacements', 6, 'debit'],
+            ['621', 'Remunerations du personnel', 6, 'debit'],
+            ['631', 'Charges sociales', 6, 'debit'],
+            ['641', 'Dotations amortissements', 6, 'debit'],
+            ['651', 'Charges exceptionnelles', 6, 'debit'],
+            ['701', 'Dimes', 7, 'credit'],
+            ['702', 'Offrandes', 7, 'credit'],
+            ['703', 'Dons recus', 7, 'credit'],
+            ['704', 'Revenus des ventes', 7, 'credit'],
+            ['705', 'Subventions', 7, 'credit'],
+            ['771', 'Produits exceptionnels', 7, 'credit'],
         ];
 
         foreach ($accounts as [$code, $label, $class, $side]) {
@@ -120,8 +146,8 @@ class EreveSeeder extends Seeder
             'phone' => '+243990000101',
         ]);
 
-        User::firstOrCreate(['email' => 'proispos1@egmail.com'], [
-            'name' => 'Administrateur eReve',
+        User::firstOrCreate(['email' => 'proispos2@gmail.com'], [
+            'name' => 'Administrateur',
             'password' => Hash::make('password'),
             'member_id' => null,
             'church_id' => null,
@@ -130,8 +156,8 @@ class EreveSeeder extends Seeder
             'status' => 'actif',
         ])->syncRoles([Rbac::ADMINISTRATEUR]);
 
-        User::firstOrCreate(['email' => 'plateforme@ereve.cd'], [
-            'name' => 'SuperAdmin plateforme',
+        User::firstOrCreate(['email' => 'proispos1@gmail.com'], [
+            'name' => 'SuperAdmin',
             'password' => Hash::make('password'),
             'member_id' => null,
             'church_id' => null,
@@ -140,12 +166,14 @@ class EreveSeeder extends Seeder
             'status' => 'actif',
         ])->syncRoles([Rbac::SUPERADMIN_PLATEFORME]);
 
-        foreach ([
-            'adminfin@ereve.cd' => ['AdminFin Mont Sion', Rbac::ADMIN_FIN],
-            'caissier@ereve.cd' => ['Caissier Mont Sion', Rbac::CAISSIER],
-            'auditeur@ereve.cd' => ['Auditeur Mont Sion', Rbac::AUDITEUR],
-            'secretaire@ereve.cd' => ['Secretaire Mont Sion', Rbac::SECRETAIRE],
-        ] as $email => [$name, $role]) {
+        foreach (
+            [
+                'adminfin@ereve.cd' => ['AdminFin Mont Sion', Rbac::ADMIN_FIN],
+                'caissier@ereve.cd' => ['Caissier Mont Sion', Rbac::CAISSIER],
+                'auditeur@ereve.cd' => ['Auditeur Mont Sion', Rbac::AUDITEUR],
+                'secretaire@ereve.cd' => ['Secretaire Mont Sion', Rbac::SECRETAIRE],
+            ] as $email => [$name, $role]
+        ) {
             User::firstOrCreate(['email' => $email], [
                 'name' => $name,
                 'password' => Hash::make('password'),

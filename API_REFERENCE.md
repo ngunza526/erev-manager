@@ -16,7 +16,7 @@ Exemple:
 
 ```json
 {
-  "email": "proispos1@egmail.com",
+  "email": "proispos2@gmail.com",
   "password": "password",
   "device_name": "mobile-lubumbashi-001"
 }

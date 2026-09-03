@@ -9,11 +9,21 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 abstract class TestCase extends BaseTestCase
 {
     /**
-     * Le compte Administrateur (coordination) cree par EreveSeeder, resolu par
-     * role : insensible a l'adresse email configuree dans le seeder.
+     * Un compte de EreveSeeder resolu par role : insensible aux adresses email
+     * configurees dans le seeder.
      */
+    protected function seededUserWithRole(string $role): User
+    {
+        return User::role($role)->firstOrFail();
+    }
+
     protected function seededAdministrateur(): User
     {
-        return User::role(Rbac::ADMINISTRATEUR)->firstOrFail();
+        return $this->seededUserWithRole(Rbac::ADMINISTRATEUR);
+    }
+
+    protected function seededSuperAdmin(): User
+    {
+        return $this->seededUserWithRole(Rbac::SUPERADMIN_PLATEFORME);
     }
 }

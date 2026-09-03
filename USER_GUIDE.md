@@ -4,7 +4,7 @@
 
 Compte de demonstration apres seed:
 
-- Email: `proispos1@egmail.com`
+- Email: `proispos2@gmail.com`
 - Mot de passe: `password`
 
 Le login utilise un challenge OTP local de demonstration. En production, configurez le transport email/SMS approprie.

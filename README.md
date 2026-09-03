@@ -75,7 +75,7 @@ php artisan serve --host=127.0.0.1 --port=8088
 
 Compte de demonstration:
 
-- Email: `proispos1@egmail.com`
+- Email: `proispos2@gmail.com`
 - Mot de passe: `password`
 
 ## Verification avant livraison
