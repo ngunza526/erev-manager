@@ -17,12 +17,19 @@ npm ci
 npm run build
 cp .env.example .env
 php artisan key:generate
-php artisan migrate --seed --force
+php artisan migrate --force
+# Provisionne le RBAC + le compte SuperAdmin plateforme (le seeder de
+# demonstration EreveSeeder refuse de tourner en production — SEC-26).
+php artisan ereve:install --email=admin@votre-domaine.cd
 php artisan storage:link
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 ```
+
+> Instance de demonstration uniquement (jamais en production) :
+> `php artisan migrate --seed --force` charge le jeu de donnees complet
+> (`EreveSeeder`, comptes a mot de passe `password`).
 
 ## Variables minimales
 
@@ -44,7 +51,17 @@ DB_PASSWORD=mot_de_passe_fort
 QUEUE_CONNECTION=database
 SESSION_DRIVER=database
 CACHE_STORE=database
+SESSION_SECURE_COOKIE=true
+
+# Obligatoire : le code de connexion (2FA) est envoye par email.
+OTP_DEMO=false
 MAIL_MAILER=smtp
+MAIL_HOST=smtp-relay.brevo.com
+MAIL_PORT=587
+MAIL_USERNAME=xxxxxxxx@smtp-brevo.com
+MAIL_PASSWORD=xsmtpsib-xxxxxxxx
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=noreply@votre-domaine.cd
 ```
 
 ## Checklist avant mise en ligne
@@ -53,15 +70,22 @@ MAIL_MAILER=smtp
 composer validate --no-check-publish
 composer audit
 npm audit --audit-level=moderate
-php artisan migrate:fresh --seed
+php artisan migrate:fresh --seed   # environnement de demonstration uniquement
 php artisan test
 npm run build
 php artisan route:list
 ```
 
+En production, remplacer `migrate:fresh --seed` par :
+
+```bash
+php artisan migrate --force
+php artisan ereve:install --email=admin@votre-domaine.cd
+```
+
 Verifier ensuite:
 
-- Connexion `admin@ereve.cd` / `password`, puis changement du mot de passe en production.
+- Connexion avec le compte cree par `ereve:install` : mot de passe + code OTP recu par email (verifier `MAIL_*`).
 - Acces au tableau de bord `/`.
 - Acces au catalogue `/solutions` avec couverture 100%.
 - Saisie d'une ecriture manuelle dans `/comptabilite`.

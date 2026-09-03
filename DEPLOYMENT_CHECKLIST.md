@@ -9,6 +9,7 @@
 - [ ] `npm audit --audit-level=moderate`
 - [ ] `npm run build`
 - [ ] `php artisan migrate --force`
+- [ ] `php artisan ereve:install --email=...` (RBAC + SuperAdmin plateforme ; **pas** `db:seed` en production)
 - [ ] `php artisan config:cache`
 - [ ] `php artisan route:cache`
 - [ ] `php artisan view:cache`
@@ -27,10 +28,12 @@
 
 ## Securite exploitation
 
-- [ ] `APP_DEBUG=false`.
+- [ ] `APP_DEBUG=false`, `APP_ENV=production`.
 - [ ] `APP_KEY` generee.
-- [ ] Mot de passe demo change.
-- [ ] HTTPS actif.
+- [ ] `SESSION_SECURE_COOKIE=true`, HTTPS actif.
+- [ ] `OTP_DEMO=false` et SMTP (`MAIL_*`) fonctionnel — sinon connexion impossible.
+- [ ] Compte SuperAdmin cree via `ereve:install` (aucun compte a mot de passe `password`).
+- [ ] `SANCTUM_TOKEN_EXPIRATION` defini ; cron `schedule:run` actif (purge des jetons).
+- [ ] `composer audit` et `npm audit --audit-level=moderate` au vert.
 - [ ] Sauvegardes base configurees.
-- [ ] Cron Laravel configure.
 - [ ] Dossier `public/` seul expose au web.
