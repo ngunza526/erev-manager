@@ -120,7 +120,10 @@ return [
     |--------------------------------------------------------------------------
     |
     | otp_demo         : affiche le code sur l'ecran de connexion (jamais en
-    |                    production). Par defaut vrai hors production.
+    |                    production) et tolere un echec d'envoi email. Par defaut
+    |                    vrai hors production. Hors demo, le code est envoye par
+    |                    email (config MAIL_*) et un envoi impossible bloque la
+    |                    connexion.
     | otp_ttl          : duree de validite du code, en secondes.
     | otp_max_attempts : nombre d'essais avant invalidation et retour au login.
     |

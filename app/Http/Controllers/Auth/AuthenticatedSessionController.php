@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Notifications\EmailOtpCodeNotification;
 use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -37,18 +39,55 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
+        $ttlSeconds = (int) config('auth.otp_ttl', 300);
         $otp = (string) random_int(100000, 999999);
+
+        // B2 : livraison du code par email. En mode demo l'echec est tolere
+        // (le code reste affiche a l'ecran) ; hors demo, un envoi impossible
+        // interrompt la connexion — sans code recu, impossible de continuer.
+        $this->deliverOtp($user, $otp, (int) ceil($ttlSeconds / 60));
+
         $request->session()->put('auth.pending_user_id', $user->id);
         $request->session()->put('auth.otp_code', $otp);
-        $request->session()->put('auth.otp_expires_at', now()->addSeconds((int) config('auth.otp_ttl', 300))->getTimestamp());
+        $request->session()->put('auth.otp_expires_at', now()->addSeconds($ttlSeconds)->getTimestamp());
         $request->session()->put('auth.otp_attempts', 0);
 
         $redirect = redirect()->route('otp.create');
 
-        // SEC-21 : le code n'est revele que hors production (mode demo).
+        // SEC-21 : le code n'est revele a l'ecran qu'en mode demo.
         return config('auth.otp_demo')
             ? $redirect->with('success', "Code OTP de demonstration: {$otp}")
-            : $redirect;
+            : $redirect->with('success', 'Un code de connexion vient de vous etre envoye par email.');
+    }
+
+    private function deliverOtp(User $user, string $otp, int $ttlMinutes): void
+    {
+        $demo = (bool) config('auth.otp_demo');
+
+        if (! filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+            if ($demo) {
+                return;
+            }
+
+            throw ValidationException::withMessages([
+                'email' => 'Aucune adresse email valide n\'est associee a ce compte pour recevoir le code.',
+            ]);
+        }
+
+        try {
+            $user->notify(new EmailOtpCodeNotification($otp, $ttlMinutes));
+        } catch (\Throwable $exception) {
+            Log::error('Echec de l\'envoi du code de connexion par email.', [
+                'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            if (! $demo) {
+                throw ValidationException::withMessages([
+                    'email' => 'Impossible d\'envoyer le code de connexion par email. Reessayez plus tard.',
+                ]);
+            }
+        }
     }
 
     public function destroy(Request $request): RedirectResponse

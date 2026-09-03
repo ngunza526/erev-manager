@@ -108,7 +108,9 @@ class SecurityHardeningTest extends TestCase
 
         $this->post('/login', ['email' => $user->email, 'password' => 'password'])
             ->assertRedirect(route('otp.create'))
-            ->assertSessionMissing('success');
+            ->assertSessionHas('success', fn ($message) => is_string($message)
+                && ! str_contains($message, 'demonstration')
+                && ! preg_match('/\b\d{6}\b/', $message));
     }
 
     // --- SEC-22 -----------------------------------------------------------

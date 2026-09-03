@@ -39,6 +39,9 @@ Legende gravite : **Haute** (exploitation directe / impact fort) ·
 (`config('auth.otp_demo')`, faux en production) ; expiration configurable
 (`auth.otp_ttl`, 5 min par defaut) ; compteur de tentatives (5 max puis
 invalidation et retour au login) ; `hash_equals` ; re-verification du statut.
+Livraison du code par email hors mode demo
+(`EmailOtpCodeNotification`, transport `MAIL_*`) — un envoi impossible
+interrompt la connexion ; en mode demo l'echec est tolere.
 
 ## SEC-22 — Upload media : aucun controle de type de fichier · Haute
 
