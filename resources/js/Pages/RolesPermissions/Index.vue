@@ -4,6 +4,7 @@ import { router } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import TextInput from '../../Components/TextInput.vue';
 import MultiSelect from '../../Components/MultiSelect.vue';
+import ClientPaginator from '../../Components/ClientPaginator.vue';
 
 const props = defineProps({ roles: Array, permissions: Array });
 
@@ -24,6 +25,9 @@ const orderedRoles = computed(() => [...props.roles].sort((a, b) => {
   return rank(a.name) - rank(b.name) || a.name.localeCompare(b.name);
 }));
 
+// Table "Roles existants" enrichie du rang (pour l'affichage pagine).
+const rolesRows = computed(() => orderedRoles.value.map((role, index) => ({ ...role, position: index + 1 })));
+
 const createRole = () => router.post('/roles-permissions/roles', roleForm, { preserveScroll: true });
 const syncRole = (role) => router.put(`/roles-permissions/roles/${role.id}/permissions`, { permissions: rolePermissions[role.id] || [] }, { preserveScroll: true });
 </script>
@@ -31,7 +35,7 @@ const syncRole = (role) => router.put(`/roles-permissions/roles/${role.id}/permi
 <template>
   <AppLayout title="Roles et permissions">
     <div class="rp">
-      <!-- 1. Formulaire "Roles et permissions" sur toute la largeur.
+      <!-- Formulaire "Roles et permissions" sur toute la largeur.
            Les permissions ne sont plus creees ici : elles sont generees
            cote back-end (permissions:sync / seeder) a partir des routes. -->
       <form class="panel form" @submit.prevent="createRole">
@@ -56,47 +60,52 @@ const syncRole = (role) => router.put(`/roles-permissions/roles/${role.id}/permi
         <button class="btn">Creer le role</button>
       </form>
 
-      <!-- 2. Accordeons pleine largeur, dans l'ordre demande -->
+      <!-- Accordeon "Roles existants" : liste paginee -->
       <details class="rp-acc" open>
         <summary>
           <span>Roles existants</span>
-          <span class="rp-count">{{ orderedRoles.length }}</span>
+          <span class="rp-count">{{ rolesRows.length }}</span>
         </summary>
         <div class="rp-acc-body">
-          <div class="rp-table-wrap">
-            <table class="rp-table">
-              <thead>
-                <tr><th>Role</th><th>Niveau</th><th>Permissions</th></tr>
-              </thead>
-              <tbody>
-                <tr v-for="(role, index) in orderedRoles" :key="role.id">
-                  <td><strong>{{ index + 1 }}. {{ role.name }}</strong></td>
-                  <td>{{ role.level }}</td>
-                  <td>{{ (rolePermissions[role.id] || []).length }} / {{ permissionNames.length }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <ClientPaginator :items="rolesRows" :per-page="10">
+            <template #default="{ items }">
+              <div class="rp-table-wrap">
+                <table class="rp-table">
+                  <thead>
+                    <tr><th>Role</th><th>Niveau</th><th>Permissions</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="role in items" :key="role.id">
+                      <td><strong>{{ role.position }}. {{ role.name }}</strong></td>
+                      <td>{{ role.level }}</td>
+                      <td>{{ (rolePermissions[role.id] || []).length }} / {{ permissionNames.length }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+          </ClientPaginator>
         </div>
       </details>
 
-      <details v-for="(role, index) in orderedRoles" :key="role.id" class="rp-acc">
+      <!-- Un accordeon par role : liste paginee des permissions (cochees = attribuees) -->
+      <details v-for="role in rolesRows" :key="role.id" class="rp-acc">
         <summary>
-          <span>{{ index + 1 }}. {{ role.name }}</span>
+          <span>{{ role.position }}. {{ role.name }}</span>
           <span class="rp-count">{{ (rolePermissions[role.id] || []).length }} / {{ permissionNames.length }}</span>
         </summary>
         <div class="rp-acc-body">
           <small class="muted">Niveau : {{ role.level }}</small>
-          <label>
-            Permissions attribuees
-            <select v-model="rolePermissions[role.id]" multiple size="12">
-              <option v-for="permission in permissionNames" :key="permission" :value="permission">{{ permission }}</option>
-            </select>
-          </label>
-          <div class="tags">
-            <span v-for="permission in rolePermissions[role.id] || []" :key="permission" class="tag">{{ permission }}</span>
-            <span v-if="!(rolePermissions[role.id] || []).length" class="muted">Aucune permission attribuee.</span>
-          </div>
+          <ClientPaginator :items="permissionNames" :per-page="10">
+            <template #default="{ items }">
+              <div class="rp-perms">
+                <label v-for="permission in items" :key="permission" class="rp-perm">
+                  <input type="checkbox" :value="permission" v-model="rolePermissions[role.id]" />
+                  <span>{{ permission }}</span>
+                </label>
+              </div>
+            </template>
+          </ClientPaginator>
           <button class="btn secondary" type="button" @click="syncRole(role)">Mettre a jour</button>
         </div>
       </details>
@@ -163,4 +172,22 @@ const syncRole = (role) => router.put(`/roles-permissions/roles/${role.id}/permi
 .rp-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
 .rp-table th { color: var(--muted); font-size: 12px; text-transform: uppercase; font-weight: 950; }
 .rp-table tr:last-child td { border-bottom: 0; }
+
+.rp-perms {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 6px 16px;
+}
+
+.rp-perm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.rp-perm input { width: 16px; min-height: 16px; }
 </style>
