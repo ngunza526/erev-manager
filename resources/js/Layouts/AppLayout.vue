@@ -128,12 +128,14 @@ const contextOptions = computed(() => {
   }
 
   const options = [];
-  if (contextSwitcher.value.community) {
+  const communities = contextSwitcher.value.communities
+    ?? (contextSwitcher.value.community ? [contextSwitcher.value.community] : []);
+  communities.forEach((community) => {
     options.push({
-      value: `communaute:${contextSwitcher.value.community.id}`,
-      label: `Coordination - ${contextSwitcher.value.community.designation}`,
+      value: `communaute:${community.id}`,
+      label: `Coordination - ${community.designation}`,
     });
-  }
+  });
 
   (contextSwitcher.value.churches ?? []).forEach((church) => {
     options.push({

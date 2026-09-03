@@ -133,6 +133,45 @@ class WorkspaceSeparationTest extends TestCase
             );
     }
 
+    public function test_platform_superadmin_can_switch_to_any_church_or_community(): void
+    {
+        [, , $church] = $this->makeWorkspaceUsers();
+
+        $superAdmin = User::create([
+            'name' => 'SuperAdmin plateforme',
+            'email' => 'superadmin-workspace@example.cd',
+            'password' => Hash::make('password'),
+            'community_id' => null,
+            'church_id' => null,
+            'level' => Rbac::LEVEL_PLATFORM,
+            'status' => 'actif',
+        ]);
+        $superAdmin->assignRole(Rbac::SUPERADMIN_PLATEFORME);
+
+        // Bascule vers une eglise : la communaute est deduite de l'eglise.
+        $this->actingAs($superAdmin)
+            ->post('/workspace/switch', ['space' => 'eglise', 'church_id' => $church->id])
+            ->assertRedirect(route('dashboard'));
+
+        $this->actingAs($superAdmin)
+            ->get('/')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('auth.space', 'eglise')
+                ->where('auth.active_church_id', $church->id)
+            );
+
+        // Bascule vers une communaute choisie.
+        $this->actingAs($superAdmin)
+            ->post('/workspace/switch', ['space' => 'communaute', 'community_id' => $church->community_id])
+            ->assertRedirect(route('dashboard'));
+
+        $this->actingAs($superAdmin)
+            ->get('/')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('auth.space', 'communaute'));
+    }
+
     public function test_non_switcher_cannot_switch_workspace_context(): void
     {
         [, $churchUser, $church] = $this->makeWorkspaceUsers();

@@ -157,24 +157,32 @@ class WorkspaceContext
             return ['can_switch' => false];
         }
 
-        $communityId = $this->communityId($user, $request);
-        $community = $communityId
-            ? Community::select('id', 'designation')->find($communityId)
-            : null;
-        $churches = $this->switchableChurches($user);
+        $ownCommunityId = $this->communityId($user, $request);
         $space = $this->space($user, $request);
         $churchId = $this->churchId($user, $request);
+
+        // Communautes selectionnables : celle d'attache si fixee, sinon toutes
+        // (SuperAdmin plateforme).
+        $communities = Community::select('id', 'designation')
+            ->when($ownCommunityId, fn ($query) => $query->whereKey($ownCommunityId))
+            ->orderBy('designation')
+            ->get();
+
+        // Communaute active : fixee, sinon celle memorisee en session.
+        $activeCommunityId = $ownCommunityId
+            ?: ((int) $this->sessionValue($request, 'community_id') ?: null);
 
         return [
             'can_switch' => true,
             'active_space' => $space,
             'active_church_id' => $churchId,
-            'active_community_id' => $communityId,
+            'active_community_id' => $activeCommunityId,
             'active_value' => $space === 'communaute'
-                ? "communaute:{$communityId}"
+                ? "communaute:{$activeCommunityId}"
                 : "eglise:{$churchId}",
-            'community' => $community,
-            'churches' => $churches,
+            'community' => $communities->firstWhere('id', $activeCommunityId),
+            'communities' => $communities,
+            'churches' => $this->switchableChurches($user),
         ];
     }
 

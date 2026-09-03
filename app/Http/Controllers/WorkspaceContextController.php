@@ -22,11 +22,20 @@ class WorkspaceContextController extends Controller
             'church_id' => ['nullable', 'integer', 'exists:churches,id'],
         ]);
 
-        $communityId = $context->communityId($user, $request);
-        abort_if(! $communityId, 422, 'Aucune communaute de coordination disponible pour ce SuperAdmin.');
+        // Communaute d'attache : fixee pour un Administrateur ; nulle pour le
+        // SuperAdmin plateforme, qui opere sur tous les locataires et choisit
+        // librement la communaute ou l'eglise cible.
+        $ownCommunityId = $context->communityId($user, $request);
 
         if ($data['space'] === 'communaute') {
-            abort_if(! empty($data['community_id']) && (int) $data['community_id'] !== $communityId, 422, 'Cette communaute est hors de votre perimetre.');
+            $communityId = $ownCommunityId ?: (int) ($data['community_id'] ?? 0);
+
+            abort_if(! $communityId, 422, 'Choisissez une communaute.');
+            abort_if(
+                $ownCommunityId && ! empty($data['community_id']) && (int) $data['community_id'] !== $ownCommunityId,
+                422,
+                'Cette communaute est hors de votre perimetre.'
+            );
 
             $request->session()->put('workspace.space', 'communaute');
             $request->session()->put('workspace.community_id', $communityId);
@@ -35,13 +44,14 @@ class WorkspaceContextController extends Controller
             return redirect()->route('dashboard')->with('success', 'Contexte communaute active.');
         }
 
-        $churchId = (int) ($data['church_id'] ?? 0);
-        $church = Church::whereKey($churchId)->where('community_id', $communityId)->first();
+        $church = Church::whereKey((int) ($data['church_id'] ?? 0))
+            ->when($ownCommunityId, fn ($query) => $query->where('community_id', $ownCommunityId))
+            ->first();
 
         abort_unless($church, 422, 'Cette eglise est hors de votre perimetre.');
 
         $request->session()->put('workspace.space', 'eglise');
-        $request->session()->put('workspace.community_id', $communityId);
+        $request->session()->put('workspace.community_id', $church->community_id);
         $request->session()->put('workspace.church_id', $church->id);
 
         return redirect()->route('dashboard')->with('success', 'Contexte eglise active.');
