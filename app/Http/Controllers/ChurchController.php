@@ -15,7 +15,7 @@ class ChurchController extends Controller
     public function index(Request $request, AccessScope $scope): Response
     {
         return Inertia::render('Churches/Index', [
-            'churches' => $scope->scopeChurchOwned(Church::with('community:id,designation')->withCount('members'), $request->user(), 'id')->latest()->paginate(12),
+            'churches' => $scope->scopeChurchOwned(Church::with('community:id,designation')->withCount('members'), $request->user(), 'id')->latest()->paginate(12)->withQueryString(),
             'communities' => $scope->communities($request->user()),
         ]);
     }

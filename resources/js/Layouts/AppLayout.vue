@@ -9,11 +9,10 @@ const pendingOffline = ref(0);
 
 // La creation de communautes (provisioning de locataires) est reservee au
 // role technique plateforme et n'apparait pas dans la navigation applicative.
+// Eglises / Utilisateurs / Roles ne sont pas repris ici : ils vivent dans la
+// section "Organisation" ci-dessous.
 const communityPrimaryNav = [
   { key: 'dashboard', href: '/', label: 'Dashboard', icon: 'D' },
-  { key: 'eglises', href: '/eglises', label: 'Eglises', icon: 'E' },
-  { key: 'utilisateurs', href: '/utilisateurs', label: 'Utilisateurs', icon: 'U' },
-  { key: 'roles', href: '/roles-permissions', label: 'Roles', icon: 'R' },
 ];
 
 const churchPrimaryNav = [
