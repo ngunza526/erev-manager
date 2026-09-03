@@ -11,7 +11,6 @@ const props = defineProps({ roles: Array, permissions: Array });
 const ROLE_ORDER = ['Administrateur', 'AdminFin', 'Auditeur', 'Caissier', 'Secretaire', 'SuperAdmin plateforme'];
 
 const roleForm = reactive({ name: '', level: 'eglise', permissions: [] });
-const permissionForm = reactive({ name: '' });
 const rolePermissions = reactive({});
 props.roles.forEach((role) => { rolePermissions[role.id] = role.permissions.map((permission) => permission.name); });
 
@@ -26,18 +25,19 @@ const orderedRoles = computed(() => [...props.roles].sort((a, b) => {
 }));
 
 const createRole = () => router.post('/roles-permissions/roles', roleForm, { preserveScroll: true });
-const createPermission = () => router.post('/roles-permissions/permissions', permissionForm, { preserveScroll: true });
 const syncRole = (role) => router.put(`/roles-permissions/roles/${role.id}/permissions`, { permissions: rolePermissions[role.id] || [] }, { preserveScroll: true });
 </script>
 
 <template>
   <AppLayout title="Roles et permissions">
     <div class="rp">
-      <!-- 1. Deux blocs cote a cote, sur toute la largeur -->
-      <div class="rp-top">
-        <form class="panel form" @submit.prevent="createRole">
-          <h2>Roles et permissions</h2>
-          <p class="muted">Creer un role et lui attribuer ses permissions.</p>
+      <!-- 1. Formulaire "Roles et permissions" sur toute la largeur.
+           Les permissions ne sont plus creees ici : elles sont generees
+           cote back-end (permissions:sync / seeder) a partir des routes. -->
+      <form class="panel form" @submit.prevent="createRole">
+        <h2>Roles et permissions</h2>
+        <p class="muted">Creer un role et lui attribuer des permissions existantes.</p>
+        <div class="rp-role-grid">
           <TextInput v-model="roleForm.name" label="Nom du role" required />
           <label>
             Niveau
@@ -46,22 +46,15 @@ const syncRole = (role) => router.put(`/roles-permissions/roles/${role.id}/permi
               <option value="coordination">Coordination</option>
             </select>
           </label>
-          <MultiSelect
-            v-model="roleForm.permissions"
-            :options="permissionNames"
-            label="Permissions"
-            placeholder="Rechercher et ajouter des permissions..."
-          />
-          <button class="btn">Creer le role</button>
-        </form>
-
-        <form class="panel form" @submit.prevent="createPermission">
-          <h2>Nouvelle permission</h2>
-          <p class="muted">Ajouter une permission attribuable aux roles.</p>
-          <TextInput v-model="permissionForm.name" label="Nom de la permission" required />
-          <button class="btn">Creer la permission</button>
-        </form>
-      </div>
+        </div>
+        <MultiSelect
+          v-model="roleForm.permissions"
+          :options="permissionNames"
+          label="Permissions"
+          placeholder="Rechercher et ajouter des permissions..."
+        />
+        <button class="btn">Creer le role</button>
+      </form>
 
       <!-- 2. Accordeons pleine largeur, dans l'ordre demande -->
       <details class="rp-acc" open>
@@ -114,15 +107,14 @@ const syncRole = (role) => router.put(`/roles-permissions/roles/${role.id}/permi
 <style scoped>
 .rp { display: grid; gap: 16px; }
 
-.rp-top {
+.rp-role-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  align-items: start;
+  gap: 12px;
 }
 
-@media (max-width: 860px) {
-  .rp-top { grid-template-columns: 1fr; }
+@media (max-width: 640px) {
+  .rp-role-grid { grid-template-columns: 1fr; }
 }
 
 .rp-acc {

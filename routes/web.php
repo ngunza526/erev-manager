@@ -80,7 +80,6 @@ Route::middleware('auth')->group(function () {
         Route::middleware('permission:'.Rbac::ROLES_MANAGE)->group(function () {
             Route::get('roles-permissions', [RolePermissionController::class, 'index'])->name('roles-permissions.index');
             Route::post('roles-permissions/roles', [RolePermissionController::class, 'storeRole'])->name('roles-permissions.roles.store');
-            Route::post('roles-permissions/permissions', [RolePermissionController::class, 'storePermission'])->name('roles-permissions.permissions.store');
             Route::put('roles-permissions/roles/{role}/permissions', [RolePermissionController::class, 'syncRolePermissions'])->name('roles-permissions.roles.permissions');
         });
         Route::middleware('permission:'.Rbac::AUDIT_VIEW)->group(function () {

@@ -43,19 +43,6 @@ class RolePermissionController extends Controller
         return back()->with('success', 'Role cree avec permissions.');
     }
 
-    public function storePermission(Request $request): RedirectResponse
-    {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:permissions,name'],
-        ]);
-
-        $permission = Permission::create(['name' => $data['name'], 'guard_name' => 'web']);
-
-        Audit::record('rbac.permission.created', $permission, ['name' => $permission->name]);
-
-        return back()->with('success', 'Permission creee.');
-    }
-
     public function syncRolePermissions(Request $request, Role $role): RedirectResponse
     {
         $data = $request->validate([

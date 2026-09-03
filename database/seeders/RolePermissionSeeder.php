@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Support\Rbac;
+use App\Support\RoutePermissions;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -19,7 +20,11 @@ class RolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach (Rbac::permissions() as $permission) {
+        // Referentiel canonique + permissions attendues par les routes : toute
+        // route protegee par un `permission:` obtient ainsi sa permission Spatie.
+        $permissions = array_unique([...Rbac::permissions(), ...RoutePermissions::referenced()]);
+
+        foreach ($permissions as $permission) {
             Permission::findOrCreate($permission, 'web');
         }
 
