@@ -2,12 +2,15 @@
 import { reactive } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
+import Pagination from '../../Components/Pagination.vue';
 
 const props = defineProps({
   logs: Object,
   filters: Object,
   actions: Array,
   churches: Array,
+  perPage: Number,
+  perPageOptions: Array,
 });
 
 const form = reactive({
@@ -15,6 +18,7 @@ const form = reactive({
   church_id: props.filters?.church_id ?? '',
   from: props.filters?.from ?? '',
   to: props.filters?.to ?? '',
+  per_page: props.perPage ?? 25,
 });
 
 const query = () => Object.fromEntries(Object.entries(form).filter(([, value]) => value !== '' && value !== null));
@@ -25,9 +29,9 @@ const resetFilters = () => {
   form.church_id = '';
   form.from = '';
   form.to = '';
-  router.get('/journal-audit', {}, { preserveScroll: true });
+  form.per_page = props.perPage ?? 25;
+  router.get('/journal-audit', { per_page: form.per_page }, { preserveScroll: true });
 };
-const goTo = (url) => url && router.get(url, {}, { preserveScroll: true, preserveState: true });
 
 const formatDate = (value) => (value ? new Date(value).toLocaleString('fr-FR') : '');
 const contextEntries = (context) => (context ? Object.entries(context) : []);
@@ -70,7 +74,15 @@ const renderValue = (value) => (Array.isArray(value) ? (value.length ? value.joi
       </form>
 
       <section class="panel">
-        <h2>Evenements <small>{{ logs.total }} au total</small></h2>
+        <div class="al-head">
+          <h2>Evenements <small>{{ logs.total }} au total</small></h2>
+          <label class="al-perpage">
+            Par page
+            <select v-model.number="form.per_page" @change="applyFilters">
+              <option v-for="option in perPageOptions" :key="option" :value="option">{{ option }}</option>
+            </select>
+          </label>
+        </div>
         <div class="list">
           <article v-for="log in logs.data" :key="log.id" class="item">
             <header>
@@ -95,12 +107,31 @@ const renderValue = (value) => (Array.isArray(value) ? (value.length ? value.joi
           <p v-if="!logs.data.length" class="item">Aucun evenement pour ces criteres.</p>
         </div>
 
-        <div v-if="logs.last_page > 1" class="tags">
-          <button class="btn secondary" type="button" :disabled="!logs.prev_page_url" @click="goTo(logs.prev_page_url)">Precedent</button>
-          <span>Page {{ logs.current_page }} / {{ logs.last_page }}</span>
-          <button class="btn secondary" type="button" :disabled="!logs.next_page_url" @click="goTo(logs.next_page_url)">Suivant</button>
-        </div>
+        <Pagination :meta="logs" />
       </section>
     </div>
   </AppLayout>
 </template>
+
+<style scoped>
+.al-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.al-head h2 { margin: 0; }
+
+.al-perpage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 850;
+  color: #475467;
+}
+
+.al-perpage select { width: auto; min-width: 72px; }
+</style>

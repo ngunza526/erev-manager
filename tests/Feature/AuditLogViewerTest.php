@@ -128,6 +128,37 @@ class AuditLogViewerTest extends TestCase
             );
     }
 
+    public function test_the_event_list_is_paginated(): void
+    {
+        for ($i = 0; $i < 23; $i++) {
+            $this->log('auth.login', $this->church->id);
+        }
+
+        $admin = $this->administrateur();
+
+        $this->actingAs($admin)
+            ->get('/journal-audit?per_page=10')
+            ->assertInertia(fn ($page) => $page
+                ->where('logs.total', 23)
+                ->where('logs.per_page', 10)
+                ->where('logs.last_page', 3)
+                ->where('perPage', 10)
+                ->count('logs.data', 10)
+            );
+
+        $this->actingAs($admin)
+            ->get('/journal-audit?per_page=10&page=3')
+            ->assertInertia(fn ($page) => $page
+                ->where('logs.current_page', 3)
+                ->count('logs.data', 3)
+            );
+
+        // per_page hors liste blanche -> valeur par defaut.
+        $this->actingAs($admin)
+            ->get('/journal-audit?per_page=999')
+            ->assertInertia(fn ($page) => $page->where('logs.per_page', 25));
+    }
+
     public function test_audit_helper_backfills_community_from_church(): void
     {
         // church_id connu, aucune entite auditee : la communaute est deduite de l'eglise.

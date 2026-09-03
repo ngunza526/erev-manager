@@ -23,7 +23,9 @@ use Inertia\Response;
  */
 class AuditLogController extends Controller
 {
-    private const PER_PAGE = 25;
+    private const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+
+    private const PER_PAGE_DEFAULT = 25;
 
     public function index(Request $request, AccessScope $scope): Response
     {
@@ -32,7 +34,12 @@ class AuditLogController extends Controller
             'church_id' => ['nullable', 'integer'],
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'per_page' => ['nullable', 'integer'],
         ]);
+
+        $perPage = in_array((int) ($filters['per_page'] ?? 0), self::PER_PAGE_OPTIONS, true)
+            ? (int) $filters['per_page']
+            : self::PER_PAGE_DEFAULT;
 
         $user = $request->user();
         $churchIds = $scope->churchIds($user);       // null => aucune restriction (plateforme)
@@ -54,7 +61,7 @@ class AuditLogController extends Controller
             ->when($filters['from'] ?? null, fn ($query, $from) => $query->whereDate('created_at', '>=', $from))
             ->when($filters['to'] ?? null, fn ($query, $to) => $query->whereDate('created_at', '<=', $to))
             ->latest('id')
-            ->paginate(self::PER_PAGE)
+            ->paginate($perPage)
             ->withQueryString();
 
         return Inertia::render('AuditLogs/Index', [
@@ -62,6 +69,8 @@ class AuditLogController extends Controller
             'filters' => $filters,
             'actions' => $base()->distinct()->orderBy('action')->pluck('action'),
             'churches' => $scope->churches($user),
+            'perPage' => $perPage,
+            'perPageOptions' => self::PER_PAGE_OPTIONS,
         ]);
     }
 }
