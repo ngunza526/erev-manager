@@ -33,6 +33,8 @@ php artisan view:cache
 
 ## Variables minimales
 
+Gabarit complet : [`.env.production.example`](.env.production.example).
+
 ```env
 APP_NAME="eReve Church"
 APP_ENV=production
