@@ -10,7 +10,7 @@ class FacilityBooking extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['church_id', 'requester_name', 'facility_name', 'starts_at', 'ends_at', 'fee_currency', 'fee_amount', 'payment_status', 'notes'];
+    protected $fillable = ['church_id', 'requester_name', 'facility_name', 'starts_at', 'ends_at', 'fee_currency', 'fee_amount', 'payment_method', 'payment_status', 'journal_entry_id', 'notes'];
 
     protected $casts = [
         'starts_at' => 'datetime',
@@ -21,5 +21,10 @@ class FacilityBooking extends Model
     public function church(): BelongsTo
     {
         return $this->belongsTo(Church::class);
+    }
+
+    public function journalEntry(): BelongsTo
+    {
+        return $this->belongsTo(JournalEntry::class);
     }
 }

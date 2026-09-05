@@ -10,15 +10,25 @@ use Illuminate\Validation\ValidationException;
 
 class AccountingService
 {
+    /**
+     * Types de collecte disponibles : compte de produit credite et
+     * caisse/compte de tresorerie debite par defaut pour chacun.
+     * Le formulaire de saisie permet de choisir une autre caisse/compte,
+     * mais chaque type de collecte a bien sa propre affectation par defaut.
+     */
+    public const COLLECTION_TYPES = [
+        'dime' => ['label' => 'Dime', 'revenue_account_code' => '701', 'default_cash_account_code' => '511'],
+        'offrande' => ['label' => 'Offrande', 'revenue_account_code' => '702', 'default_cash_account_code' => '511'],
+        'don' => ['label' => 'Don', 'revenue_account_code' => '703', 'default_cash_account_code' => '511'],
+        'action_grace' => ['label' => 'Action de grace', 'revenue_account_code' => '706', 'default_cash_account_code' => '511'],
+        'offrande_speciale' => ['label' => 'Offrande speciale', 'revenue_account_code' => '707', 'default_cash_account_code' => '511'],
+    ];
+
     public function recordCollection(array $data): JournalEntry
     {
-        $map = [
-            'dime' => '701',
-            'offrande' => '702',
-            'don' => '703',
-        ];
+        $type = self::COLLECTION_TYPES[$data['type']] ?? null;
 
-        if (! isset($map[$data['type']])) {
+        if (! $type) {
             throw ValidationException::withMessages(['type' => 'Type de collecte invalide.']);
         }
 
@@ -30,8 +40,8 @@ class AccountingService
             'exchange_rate' => $data['exchange_rate'],
             'created_by' => $data['created_by'] ?? null,
             'lines' => [
-                ['account_code' => $data['cash_account_code'] ?? '511', 'label' => 'Encaissement', 'debit' => $data['amount'], 'credit' => 0],
-                ['account_code' => $map[$data['type']], 'label' => $data['description'] ?? ucfirst($data['type']), 'debit' => 0, 'credit' => $data['amount']],
+                ['account_code' => $data['cash_account_code'] ?? $type['default_cash_account_code'], 'label' => 'Encaissement', 'debit' => $data['amount'], 'credit' => 0],
+                ['account_code' => $type['revenue_account_code'], 'label' => $data['description'] ?? $type['label'], 'debit' => 0, 'credit' => $data['amount']],
             ],
         ]);
     }

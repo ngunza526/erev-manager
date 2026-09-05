@@ -1,6 +1,6 @@
 <script setup>
 import { reactive } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { router, Link } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import TextInput from '../../Components/TextInput.vue';
 import Pagination from '../../Components/Pagination.vue';
@@ -56,6 +56,13 @@ const destroy = (account) => {
                 <td><span class="tag" :class="{ gold: !account.is_active }">{{ account.is_active ? 'actif' : 'inactif' }}</span></td>
                 <td>
                   <div class="row-actions">
+                    <Link
+                      class="icon-action is-blue"
+                      :href="`/rapports/grand-livre/${account.id}`"
+                      title="Voir le grand livre du compte"
+                    >
+                      <i class="bi bi-journal-text" />
+                    </Link>
                     <button
                       class="icon-action is-green"
                       :class="{ 'is-on': account.is_active }"

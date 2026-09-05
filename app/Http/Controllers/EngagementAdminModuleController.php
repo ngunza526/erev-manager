@@ -11,6 +11,7 @@ use App\Models\ServiceRequest;
 use App\Models\Survey;
 use App\Models\Testimony;
 use App\Services\AccessScope;
+use App\Services\Accounting\AccountingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -73,7 +74,7 @@ class EngagementAdminModuleController extends Controller
         ],
         'reservations-locaux' => [
             'title' => 'Reservation locaux',
-            'description' => 'Planning des temples, salles et locations avec montant CDF/USD.',
+            'description' => 'Planning des temples, salles et locations avec montant CDF/USD, comptabilise quand le paiement est encaisse.',
             'model' => FacilityBooking::class,
             'primary' => 'facility_name',
             'secondary' => 'requester_name',
@@ -85,7 +86,8 @@ class EngagementAdminModuleController extends Controller
                 ['name' => 'ends_at', 'label' => 'Fin', 'type' => 'datetime-local', 'required' => true],
                 ['name' => 'fee_currency', 'label' => 'Devise', 'default' => 'CDF'],
                 ['name' => 'fee_amount', 'label' => 'Montant', 'type' => 'number', 'default' => 0],
-                ['name' => 'payment_status', 'label' => 'Paiement', 'default' => 'unpaid'],
+                ['name' => 'payment_method', 'label' => 'Paiement', 'default' => 'cash'],
+                ['name' => 'payment_status', 'label' => 'Statut paiement', 'default' => 'unpaid'],
                 ['name' => 'notes', 'label' => 'Notes', 'type' => 'textarea'],
             ],
             'rules' => [
@@ -96,6 +98,7 @@ class EngagementAdminModuleController extends Controller
                 'ends_at' => ['required', 'date', 'after:starts_at'],
                 'fee_currency' => ['required', 'in:USD,CDF'],
                 'fee_amount' => ['required', 'numeric', 'min:0'],
+                'payment_method' => ['required', 'string', 'max:80'],
                 'payment_status' => ['required', 'string', 'max:80'],
                 'notes' => ['nullable', 'string'],
             ],
@@ -158,7 +161,7 @@ class EngagementAdminModuleController extends Controller
         ],
         'promesses-dons' => [
             'title' => 'Promesses de dons',
-            'description' => 'Campagnes de construction, missions et engagements en USD/CDF.',
+            'description' => 'Campagnes de construction, missions et engagements en USD/CDF, comptabilise pour le montant deja recu.',
             'model' => Pledge::class,
             'primary' => 'donor_name',
             'secondary' => 'campaign',
@@ -169,6 +172,7 @@ class EngagementAdminModuleController extends Controller
                 ['name' => 'currency', 'label' => 'Devise', 'default' => 'USD'],
                 ['name' => 'pledged_amount', 'label' => 'Montant promis', 'type' => 'number', 'required' => true],
                 ['name' => 'received_amount', 'label' => 'Montant recu', 'type' => 'number', 'default' => 0],
+                ['name' => 'payment_method', 'label' => 'Paiement', 'default' => 'cash'],
                 ['name' => 'due_date', 'label' => 'Echeance', 'type' => 'date'],
                 ['name' => 'status', 'label' => 'Statut', 'default' => 'active'],
             ],
@@ -179,6 +183,7 @@ class EngagementAdminModuleController extends Controller
                 'currency' => ['required', 'in:USD,CDF'],
                 'pledged_amount' => ['required', 'numeric', 'min:0'],
                 'received_amount' => ['nullable', 'numeric', 'min:0'],
+                'payment_method' => ['required', 'string', 'max:80'],
                 'due_date' => ['nullable', 'date'],
                 'status' => ['required', 'string', 'max:80'],
             ],
@@ -248,15 +253,73 @@ class EngagementAdminModuleController extends Controller
         ]);
     }
 
-    public function store(Request $request, AccessScope $scope, string $module): RedirectResponse
+    public function store(Request $request, AccessScope $scope, AccountingService $accounting, string $module): RedirectResponse
     {
         $config = $this->config($module);
         $model = $config['model'];
         $data = $request->validate($config['rules']);
         $scope->ensureChurchAllowed($request->user(), (int) $data['church_id']);
+
+        $entry = $this->maybeCreateJournalEntry($module, $data, $request, $accounting);
+        if ($entry) {
+            $data['journal_entry_id'] = $entry->id;
+        }
+
         $model::create($data);
 
-        return back()->with('success', 'Module enregistre.');
+        return back()->with('success', $entry ? 'Module enregistre avec ecriture comptable.' : 'Module enregistre.');
+    }
+
+    /**
+     * Ces deux modules font apparaitre un montant d'argent reellement
+     * encaisse (location payee, versement sur une promesse) : on les
+     * comptabilise au meme titre que les autres mouvements de tresorerie
+     * de l'application (cf. AdvancedChurchModuleController).
+     */
+    private function maybeCreateJournalEntry(string $module, array $data, Request $request, AccountingService $accounting): mixed
+    {
+        if ($module === 'reservations-locaux' && ($data['payment_status'] ?? null) === 'paid' && (float) ($data['fee_amount'] ?? 0) > 0) {
+            return $accounting->recordBalancedEntry([
+                'church_id' => $data['church_id'],
+                'type' => 'facility_booking',
+                'entry_date' => now()->toDateString(),
+                'description' => "Location salle {$data['facility_name']}",
+                'currency' => $data['fee_currency'],
+                'exchange_rate' => 1,
+                'created_by' => $request->user()?->id,
+                'lines' => [
+                    ['account_code' => $this->cashAccount($data['payment_method'] ?? 'cash'), 'label' => 'Encaissement location', 'debit' => $data['fee_amount'], 'credit' => 0],
+                    ['account_code' => '704', 'label' => 'Revenus des ventes', 'debit' => 0, 'credit' => $data['fee_amount']],
+                ],
+            ]);
+        }
+
+        if ($module === 'promesses-dons' && (float) ($data['received_amount'] ?? 0) > 0) {
+            return $accounting->recordBalancedEntry([
+                'church_id' => $data['church_id'],
+                'type' => 'pledge_payment',
+                'entry_date' => now()->toDateString(),
+                'description' => "Versement promesse {$data['donor_name']} - {$data['campaign']}",
+                'currency' => $data['currency'],
+                'exchange_rate' => 1,
+                'created_by' => $request->user()?->id,
+                'lines' => [
+                    ['account_code' => $this->cashAccount($data['payment_method'] ?? 'cash'), 'label' => 'Encaissement promesse', 'debit' => $data['received_amount'], 'credit' => 0],
+                    ['account_code' => '703', 'label' => 'Dons recus', 'debit' => 0, 'credit' => $data['received_amount']],
+                ],
+            ]);
+        }
+
+        return null;
+    }
+
+    private function cashAccount(string $paymentMethod): string
+    {
+        return match ($paymentMethod) {
+            'bank', 'card' => '501',
+            'mobile_money', 'mpesa', 'airtel_money', 'orange_money' => '515',
+            default => '511',
+        };
     }
 
     private function config(string $module): array

@@ -105,6 +105,8 @@ class EreveSeeder extends Seeder
             ['703', 'Dons recus', 7, 'credit'],
             ['704', 'Revenus des ventes', 7, 'credit'],
             ['705', 'Subventions', 7, 'credit'],
+            ['706', 'Actions de grace', 7, 'credit'],
+            ['707', 'Offrandes speciales', 7, 'credit'],
             ['771', 'Produits exceptionnels', 7, 'credit'],
         ];
 

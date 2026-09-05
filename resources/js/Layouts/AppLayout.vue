@@ -75,7 +75,14 @@ const churchNavSections = [
     key: 'finance',
     label: 'Finance',
     items: [
-      { href: '/comptabilite', label: 'Comptabilite' },
+      {
+        label: 'Comptabilite',
+        children: [
+          { href: '/comptabilite/collecte', label: 'Collecte' },
+          { href: '/comptabilite/saisie', label: 'Saisie debit-credit' },
+          { href: '/comptabilite/journal', label: 'Journal' },
+        ],
+      },
       { href: '/contributions-publiques', label: 'Contributions publiques' },
       { href: '/depenses', label: 'Depenses' },
       { href: '/boutique-ressources', label: 'Boutique' },
@@ -86,6 +93,8 @@ const churchNavSections = [
       { href: '/fonds-dedies', label: 'Fonds dedies' },
       { href: '/mouvements-fonds', label: 'Mouvements' },
       { href: '/plan-comptable', label: 'Plan comptable' },
+      { href: '/rapports/balance', label: 'Balance generale' },
+      { href: '/rapports/etats-financiers', label: 'Etats financiers' },
     ],
   },
   {
@@ -150,9 +159,13 @@ const primaryNav = computed(() => userSpace.value === 'communaute' ? communityPr
 const navSections = computed(() => userSpace.value === 'communaute' ? communityNavSections : churchNavSections);
 
 const isActive = (href) => currentUrl.value === href || (href !== '/' && currentUrl.value.startsWith(href));
-const sectionIsActive = (section) => section.items.some((item) => isActive(item.href));
+// Un item de sous-menu peut soit pointer vers un lien, soit regrouper des
+// enfants (ex. Comptabilite -> Collecte / Saisie debit-credit / Journal).
+const itemIsActive = (item) => item.children ? item.children.some((child) => isActive(child.href)) : isActive(item.href);
+const sectionIsActive = (section) => section.items.some((item) => itemIsActive(item));
+const flattenItems = (items) => items.flatMap((item) => item.children ?? [item]);
 const visibleContext = computed(() => {
-  const active = [...primaryNav.value, ...navSections.value.flatMap((section) => section.items)].find((item) => isActive(item.href));
+  const active = [...primaryNav.value, ...navSections.value.flatMap((section) => flattenItems(section.items))].find((item) => isActive(item.href));
   return active?.label ?? 'Dashboard';
 });
 
@@ -221,14 +234,27 @@ onMounted(async () => {
             <span class="chevron">+</span>
           </summary>
           <div class="nav-links">
-            <Link
-              v-for="item in section.items"
-              :key="item.href"
-              :href="item.href"
-              :class="{ active: isActive(item.href) }"
-            >
-              {{ item.label }}
-            </Link>
+            <template v-for="item in section.items" :key="item.href ?? item.label">
+              <details v-if="item.children" class="nav-subsection" :open="itemIsActive(item)">
+                <summary>
+                  <span>{{ item.label }}</span>
+                  <span class="chevron">+</span>
+                </summary>
+                <div class="nav-links nav-sublinks">
+                  <Link
+                    v-for="child in item.children"
+                    :key="child.href"
+                    :href="child.href"
+                    :class="{ active: isActive(child.href) }"
+                  >
+                    {{ child.label }}
+                  </Link>
+                </div>
+              </details>
+              <Link v-else :href="item.href" :class="{ active: isActive(item.href) }">
+                {{ item.label }}
+              </Link>
+            </template>
           </div>
         </details>
       </div>

@@ -10,7 +10,7 @@ class Pledge extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['church_id', 'donor_name', 'campaign', 'currency', 'pledged_amount', 'received_amount', 'due_date', 'status'];
+    protected $fillable = ['church_id', 'donor_name', 'campaign', 'currency', 'pledged_amount', 'received_amount', 'payment_method', 'due_date', 'status', 'journal_entry_id'];
 
     protected $casts = [
         'pledged_amount' => 'decimal:2',
@@ -21,5 +21,10 @@ class Pledge extends Model
     public function church(): BelongsTo
     {
         return $this->belongsTo(Church::class);
+    }
+
+    public function journalEntry(): BelongsTo
+    {
+        return $this->belongsTo(JournalEntry::class);
     }
 }

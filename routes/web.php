@@ -98,9 +98,21 @@ Route::middleware('auth')->group(function () {
             Route::patch('membres/{member}/statut', [MemberController::class, 'promote'])->name('membres.promote');
         });
 
+        // Comptabilite : trois ecrans dedies (Collecte, Saisie debit-credit,
+        // Journal), regroupes en sous-menu ; /comptabilite reste un alias
+        // vers le Journal pour compatibilite des liens existants.
         Route::get('comptabilite', [AccountingController::class, 'index'])
             ->middleware('permission:'.Rbac::REPORTS_VIEW)
             ->name('accounting.index');
+        Route::get('comptabilite/collecte', [AccountingController::class, 'collecte'])
+            ->middleware('permission:'.Rbac::REPORTS_VIEW)
+            ->name('accounting.collecte');
+        Route::get('comptabilite/saisie', [AccountingController::class, 'saisie'])
+            ->middleware('permission:'.Rbac::REPORTS_VIEW)
+            ->name('accounting.saisie');
+        Route::get('comptabilite/journal', [AccountingController::class, 'journal'])
+            ->middleware('permission:'.Rbac::REPORTS_VIEW)
+            ->name('accounting.journal');
         Route::post('comptabilite/collectes', [AccountingController::class, 'collection'])
             ->middleware('permission:'.Rbac::CONTRIBUTIONS_RECORD)
             ->name('accounting.collection');
@@ -125,10 +137,13 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::middleware('permission:'.Rbac::REPORTS_VIEW)->group(function () {
+            Route::get('rapports/balance', [ReportController::class, 'trialBalance'])->name('reports.trial-balance');
             Route::get('rapports/balance.pdf', [ReportController::class, 'trialBalancePdf'])->name('reports.trial-balance.pdf');
             Route::get('rapports/balance.xlsx', [ReportController::class, 'trialBalanceExcel'])->name('reports.trial-balance.excel');
+            Route::get('rapports/etats-financiers', [ReportController::class, 'financialStatements'])->name('reports.financial-statements');
             Route::get('rapports/etats-ohada.pdf', [ReportController::class, 'financialStatementsPdf'])->name('reports.financial-statements.pdf');
             Route::get('rapports/etats-ohada.xlsx', [ReportController::class, 'financialStatementsExcel'])->name('reports.financial-statements.excel');
+            Route::get('rapports/grand-livre/{compte}', [ReportController::class, 'accountLedger'])->name('reports.account-ledger');
         });
 
         Route::middleware('permission:'.Rbac::SERVICES_MANAGE)->group(function () {

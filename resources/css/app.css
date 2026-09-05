@@ -181,6 +181,31 @@ a { color: inherit; text-decoration: none; }
   color: var(--blue-dark);
 }
 
+/* Sous-menu imbrique (ex. Finance > Comptabilite > Collecte/Saisie/Journal). */
+.nav-subsection summary {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  padding: 0 10px 0 40px;
+  border-radius: 8px;
+  color: #475467;
+  font-size: 14px;
+  font-weight: 760;
+  list-style: none;
+}
+
+.nav-subsection summary::-webkit-details-marker { display: none; }
+
+.nav-subsection summary:hover {
+  background: var(--blue-soft);
+  color: var(--blue-dark);
+}
+
+.nav-sublinks a { padding-left: 56px; }
+
 .side-actions {
   margin-top: auto;
   display: grid;
@@ -453,4 +478,49 @@ button:disabled {
   .journal-line { grid-template-columns: 60px minmax(0,1fr); }
   .hero strong { font-size: 28px; }
   .public-panel h1, h1 { font-size: 28px; }
+}
+
+/* Rapports financiers : mise en page imprimable (bilan, balance, grand livre). */
+.report-table-wrap { overflow-x: auto; }
+.report-table { width: 100%; border-collapse: collapse; }
+.report-table th,
+.report-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.report-table th { color: var(--muted); font-size: 12px; text-transform: uppercase; font-weight: 950; white-space: nowrap; }
+.report-table td.num, .report-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.report-table tfoot td { font-weight: 950; border-top: 2px solid var(--line); border-bottom: 0; }
+.report-table tr.section-title td { background: #f8fafc; font-weight: 950; text-transform: uppercase; font-size: 12px; color: var(--muted); }
+
+.report-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.report-head h2 { margin: 0; }
+.report-head small { color: var(--muted); }
+
+.report-check {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: 850;
+  background: #ecfdf3;
+  color: var(--green);
+}
+.report-check.is-off { background: #fef3f2; color: var(--danger); }
+
+@media print {
+  .side, .top, .no-print { display: none !important; }
+  .shell { display: block !important; }
+  .main { padding: 0 !important; margin: 0 !important; }
+  .panel { box-shadow: none !important; border: none !important; padding: 0 !important; }
+  body { background: #fff !important; }
+  .report-table { font-size: 12px; }
 }

@@ -14,11 +14,44 @@ use Inertia\Response;
 
 class AccountingController extends Controller
 {
+    /**
+     * Alias historique de /comptabilite : redirige vers le journal, ecran
+     * par defaut du sous-menu Comptabilite.
+     */
     public function index(Request $request, AccessScope $scope): Response
     {
-        return Inertia::render('Accounting/Index', [
+        return $this->journal($request, $scope);
+    }
+
+    public function collecte(Request $request, AccessScope $scope): Response
+    {
+        return Inertia::render('Accounting/Collecte', [
+            'churches' => $scope->churches($request->user()),
+            'cashAccounts' => ChartOfAccount::where('class', 5)->orderBy('code')->get(),
+            'collectionTypes' => $this->collectionTypesForFrontend(),
+            'entries' => $scope->scopeChurchOwned(
+                JournalEntry::with('church:id,designation', 'lines.account')
+                    ->whereIn('type', array_keys(AccountingService::COLLECTION_TYPES)),
+                $request->user()
+            )->latest()->paginate(12)->withQueryString(),
+        ]);
+    }
+
+    public function saisie(Request $request, AccessScope $scope): Response
+    {
+        return Inertia::render('Accounting/Saisie', [
             'churches' => $scope->churches($request->user()),
             'accounts' => ChartOfAccount::orderBy('code')->get(),
+            'entries' => $scope->scopeChurchOwned(
+                JournalEntry::with('church:id,designation', 'lines.account')->where('type', 'manual'),
+                $request->user()
+            )->latest()->paginate(12)->withQueryString(),
+        ]);
+    }
+
+    public function journal(Request $request, AccessScope $scope): Response
+    {
+        return Inertia::render('Accounting/Journal', [
             'entries' => $scope->scopeChurchOwned(JournalEntry::with('church:id,designation', 'lines.account'), $request->user())->latest()->paginate(12)->withQueryString(),
         ]);
     }
@@ -27,7 +60,8 @@ class AccountingController extends Controller
     {
         $data = $request->validate([
             'church_id' => ['required', 'exists:churches,id'],
-            'type' => ['required', Rule::in(['dime', 'offrande', 'don'])],
+            'type' => ['required', Rule::in(array_keys(AccountingService::COLLECTION_TYPES))],
+            'cash_account_code' => ['nullable', 'exists:chart_of_accounts,code'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'currency' => ['required', Rule::in(['USD', 'CDF'])],
             'exchange_rate' => ['required', 'numeric', 'min:1'],
@@ -62,5 +96,21 @@ class AccountingController extends Controller
         $accounting->recordBalancedEntry($data);
 
         return back()->with('success', 'Ecriture manuelle debit-credit validee.');
+    }
+
+    /**
+     * Types de collecte + libelle + caisse/compte par defaut, au format
+     * attendu par le formulaire Vue (une entree par type, code inclus).
+     */
+    private function collectionTypesForFrontend(): array
+    {
+        return collect(AccountingService::COLLECTION_TYPES)
+            ->map(fn (array $type, string $code) => [
+                'code' => $code,
+                'label' => $type['label'],
+                'default_cash_account_code' => $type['default_cash_account_code'],
+            ])
+            ->values()
+            ->all();
     }
 }
