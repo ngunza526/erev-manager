@@ -44,7 +44,15 @@ return [
             'encryption' => env('MAIL_ENCRYPTION', 'tls'),
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
-            'timeout' => null,
+            // Sans timeout explicite, une connexion a un hote SMTP injoignable
+            // ou lent bloque jusqu'au delai socket par defaut (souvent 60s),
+            // qui entre en concurrence avec max_execution_time et peut se
+            // terminer par une erreur fatale non rattrapable ("Maximum
+            // execution time of 60 seconds exceeded") au lieu d'une exception
+            // proprement interceptee par App\Support\Auth::deliverOtp() et les
+            // notifications. 10s laisse la marge pour un handshake TLS lent
+            // tout en restant tres en-dessous de la limite d'execution.
+            'timeout' => (int) env('MAIL_TIMEOUT', 10),
             'local_domain' => env('MAIL_EHLO_DOMAIN'),
         ],
 

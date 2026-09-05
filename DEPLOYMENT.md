@@ -63,6 +63,7 @@ MAIL_PORT=587
 MAIL_USERNAME=xxxxxxxx@smtp-brevo.com
 MAIL_PASSWORD=xsmtpsib-xxxxxxxx
 MAIL_ENCRYPTION=tls
+MAIL_TIMEOUT=10
 MAIL_FROM_ADDRESS=noreply@votre-domaine.cd
 ```
 

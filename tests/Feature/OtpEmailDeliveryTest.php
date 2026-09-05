@@ -63,6 +63,16 @@ class OtpEmailDeliveryTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_smtp_transport_has_a_bounded_timeout_by_default(): void
+    {
+        // Sans ce timeout, une connexion a un hote SMTP injoignable ou lent
+        // bloque jusqu'au delai socket par defaut (souvent 60s), en concurrence
+        // avec max_execution_time : erreur fatale non rattrapable ("Maximum
+        // execution time of 60 seconds exceeded") au lieu d'un echec propre.
+        $this->assertNotNull(config('mail.mailers.smtp.timeout'));
+        $this->assertLessThanOrEqual(30, (int) config('mail.mailers.smtp.timeout'));
+    }
+
     public function test_demo_mode_tolerates_a_delivery_failure(): void
     {
         config([
