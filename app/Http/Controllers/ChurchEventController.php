@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Church;
 use App\Models\ChurchEvent;
 use App\Services\AccessScope;
 use Illuminate\Http\RedirectResponse;
@@ -17,7 +16,7 @@ class ChurchEventController extends Controller
     {
         return Inertia::render('Events/Index', [
             'churches' => $scope->churches($request->user()),
-            'events' => $scope->scopeChurchOwned(ChurchEvent::with('church:id,designation'), $request->user())->latest('starts_at')->paginate(15),
+            'events' => $scope->scopeChurchOwned(ChurchEvent::with('church:id,designation'), $request->user())->latest('starts_at')->paginate(15)->withQueryString(),
         ]);
     }
 

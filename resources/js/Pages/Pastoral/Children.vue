@@ -3,6 +3,7 @@ import { reactive } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import TextInput from '../../Components/TextInput.vue';
+import Pagination from '../../Components/Pagination.vue';
 
 defineProps({ churches: Array, items: Object });
 
@@ -19,39 +20,85 @@ const checkOut = (item) => router.post(`/enfants/${item.id}/check-out`, { check_
 
 <template>
   <AppLayout title="Eglise des enfants">
-    <div class="grid two">
+    <div class="grid">
       <form class="panel form" @submit.prevent="submit">
         <h2>Nouvel enfant</h2>
-        <label>Eglise<select v-model="form.church_id" required><option value="">Choisir</option><option v-for="c in churches" :key="c.id" :value="c.id">{{ c.designation }}</option></select></label>
-        <TextInput v-model="form.full_name" label="Nom enfant" required />
-        <TextInput v-model="form.birth_date" label="Date naissance" type="date" required />
-        <div class="row"><TextInput v-model="form.guardian_name" label="Responsable" required /><TextInput v-model="form.guardian_phone" label="Telephone responsable" /></div>
-        <div class="row"><TextInput v-model="form.classroom" label="Classe" /><TextInput v-model="form.check_in_code" label="Code securite" /></div>
-        <label class="check-row"><input v-model="form.checked_in" type="checkbox" /><span>Check-in actif</span></label>
+        <div class="pst-grid">
+          <label>
+            Eglise
+            <select v-model="form.church_id" required>
+              <option value="">Choisir</option>
+              <option v-for="church in churches" :key="church.id" :value="church.id">{{ church.designation }}</option>
+            </select>
+          </label>
+          <TextInput v-model="form.full_name" label="Nom enfant" required />
+          <TextInput v-model="form.birth_date" label="Date naissance" type="date" required />
+          <TextInput v-model="form.guardian_name" label="Responsable" required />
+          <TextInput v-model="form.guardian_phone" label="Telephone responsable" />
+          <TextInput v-model="form.classroom" label="Classe" />
+          <TextInput v-model="form.check_in_code" label="Code securite" />
+          <label class="check-row"><input v-model="form.checked_in" type="checkbox" /><span>Check-in actif</span></label>
+        </div>
         <button class="btn">Enregistrer</button>
       </form>
 
       <section class="panel">
-        <h2>Check-in enfants</h2>
-        <div class="list">
-          <article v-for="item in items.data" :key="item.id" class="item">
-            <header><strong>{{ item.full_name }}</strong><small>{{ item.checked_in ? 'present' : 'sorti' }}</small></header>
-            <small>{{ item.church?.designation }} - {{ item.guardian_name }} - {{ item.guardian_phone }}</small>
-            <div class="tags">
-              <span class="tag">{{ item.classroom || 'classe a definir' }}</span>
-              <span class="tag gold">{{ item.check_in_code || 'sans code' }}</span>
-              <span v-if="item.checked_in_at" class="tag">Entree {{ new Date(item.checked_in_at).toLocaleTimeString() }}</span>
-              <span v-if="item.released_to" class="tag">Sortie: {{ item.released_to }}</span>
-            </div>
-            <div class="child-actions">
-              <input v-model="stateFor(item).code" placeholder="Code securite" />
-              <input v-model="stateFor(item).released_to" placeholder="Remis a" />
-              <button class="btn secondary" type="button" @click="checkIn(item)">Entree</button>
-              <button class="btn secondary" type="button" @click="checkOut(item)">Sortie</button>
-            </div>
-          </article>
+        <h2>Check-in enfants <small>{{ items.total }} au total</small></h2>
+        <div class="pst-table-wrap">
+          <table class="pst-table">
+            <thead>
+              <tr><th>Enfant</th><th>Responsable</th><th>Classe</th><th>Etat</th><th>Securite / sortie</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in items.data" :key="item.id">
+                <td><strong>{{ item.full_name }}</strong></td>
+                <td>{{ item.guardian_name }} · {{ item.guardian_phone || 's/n' }}</td>
+                <td>{{ item.classroom || 'a definir' }}</td>
+                <td>
+                  <span class="tag" :class="{ gold: !item.checked_in }">{{ item.checked_in ? 'present' : 'sorti' }}</span>
+                  <div class="pst-meta">
+                    <small v-if="item.checked_in_at">Entree {{ new Date(item.checked_in_at).toLocaleTimeString() }}</small>
+                    <small v-if="item.released_to">Sortie : {{ item.released_to }}</small>
+                  </div>
+                </td>
+                <td class="child-actions">
+                  <input v-model="stateFor(item).code" placeholder="Code securite" />
+                  <input v-model="stateFor(item).released_to" placeholder="Remis a" />
+                  <button class="btn secondary sm" type="button" @click="checkIn(item)">Entree</button>
+                  <button class="btn secondary sm" type="button" @click="checkOut(item)">Sortie</button>
+                </td>
+              </tr>
+              <tr v-if="!items.data.length"><td colspan="5">Aucun enfant enregistre.</td></tr>
+            </tbody>
+          </table>
         </div>
+        <Pagination :meta="items" />
       </section>
     </div>
   </AppLayout>
 </template>
+
+<style scoped>
+.pst-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.pst-table-wrap { overflow-x: auto; }
+.pst-table { width: 100%; border-collapse: collapse; }
+.pst-table th,
+.pst-table td {
+  text-align: left;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+  vertical-align: middle;
+}
+.pst-table th { color: var(--muted); font-size: 12px; text-transform: uppercase; font-weight: 950; white-space: nowrap; }
+.pst-table tr:last-child td { border-bottom: 0; }
+.pst-meta { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; color: var(--muted); }
+.child-actions { min-width: 320px; }
+.btn.sm { min-height: 30px; padding: 0 10px; font-size: 12px; }
+</style>

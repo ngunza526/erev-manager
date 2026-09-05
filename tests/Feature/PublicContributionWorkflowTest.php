@@ -57,8 +57,8 @@ class PublicContributionWorkflowTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('PublicContributions/Index')
-                ->where('pending.0.contributor_name', 'Pending Un')
-                ->where('pending.0.status', 'pending')
+                ->where('pending.data.0.contributor_name', 'Pending Un')
+                ->where('pending.data.0.status', 'pending')
             );
     }
 

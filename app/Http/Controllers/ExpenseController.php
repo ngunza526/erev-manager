@@ -3,10 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Budget;
-use App\Models\Church;
 use App\Models\Expense;
-use App\Services\Accounting\AccountingService;
 use App\Services\AccessScope;
+use App\Services\Accounting\AccountingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -22,7 +21,7 @@ class ExpenseController extends Controller
         return Inertia::render('Expenses/Index', [
             'churches' => $scope->churches($request->user()),
             'budgets' => Budget::select('id', 'church_id', 'name', 'currency')->when(is_array($churchIds), fn ($query) => $query->whereIn('church_id', $churchIds))->orderBy('name')->get(),
-            'expenses' => $scope->scopeChurchOwned(Expense::with('church:id,designation', 'budget:id,name', 'journalEntry:id,reference'), $request->user())->latest('expense_date')->paginate(15),
+            'expenses' => $scope->scopeChurchOwned(Expense::with('church:id,designation', 'budget:id,name', 'journalEntry:id,reference'), $request->user())->latest('expense_date')->paginate(15)->withQueryString(),
         ]);
     }
 

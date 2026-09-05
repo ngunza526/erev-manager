@@ -15,7 +15,7 @@ class ChartOfAccountController extends Controller
     public function index(): Response
     {
         return Inertia::render('ChartOfAccounts/Index', [
-            'accounts' => ChartOfAccount::orderBy('code')->paginate(30),
+            'accounts' => ChartOfAccount::orderBy('code')->paginate(30)->withQueryString(),
         ]);
     }
 

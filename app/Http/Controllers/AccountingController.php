@@ -3,10 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\ChartOfAccount;
-use App\Models\Church;
 use App\Models\JournalEntry;
-use App\Services\Accounting\AccountingService;
 use App\Services\AccessScope;
+use App\Services\Accounting\AccountingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -20,7 +19,7 @@ class AccountingController extends Controller
         return Inertia::render('Accounting/Index', [
             'churches' => $scope->churches($request->user()),
             'accounts' => ChartOfAccount::orderBy('code')->get(),
-            'entries' => $scope->scopeChurchOwned(JournalEntry::with('church:id,designation', 'lines.account'), $request->user())->latest()->paginate(12),
+            'entries' => $scope->scopeChurchOwned(JournalEntry::with('church:id,designation', 'lines.account'), $request->user())->latest()->paginate(12)->withQueryString(),
         ]);
     }
 

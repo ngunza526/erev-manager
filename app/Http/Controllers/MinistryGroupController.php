@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Church;
 use App\Models\MinistryGroup;
 use App\Services\AccessScope;
 use Illuminate\Http\RedirectResponse;
@@ -16,7 +15,7 @@ class MinistryGroupController extends Controller
     {
         return Inertia::render('Groups/Index', [
             'churches' => $scope->churches($request->user()),
-            'groups' => $scope->scopeChurchOwned(MinistryGroup::with('church:id,designation'), $request->user())->latest()->paginate(15),
+            'groups' => $scope->scopeChurchOwned(MinistryGroup::with('church:id,designation'), $request->user())->latest()->paginate(15)->withQueryString(),
         ]);
     }
 

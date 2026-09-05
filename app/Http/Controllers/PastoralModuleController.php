@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Child;
-use App\Models\Church;
 use App\Models\NewConvert;
 use App\Models\SecurityIncident;
 use App\Models\SermonMedia;
@@ -134,7 +133,7 @@ class PastoralModuleController extends Controller
 
         return Inertia::render($config['page'], [
             'churches' => $scope->churches($request->user()),
-            'items' => $scope->scopeChurchOwned($model::with($config['relation']), $request->user())->latest()->paginate(15),
+            'items' => $scope->scopeChurchOwned($model::with($config['relation']), $request->user())->latest()->paginate(15)->withQueryString(),
         ]);
     }
 

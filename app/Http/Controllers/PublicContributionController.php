@@ -28,13 +28,14 @@ class PublicContributionController extends Controller
                 ->where('status', PublicContribution::STATUS_PENDING)
                 ->with('church:id,designation', 'event:id,title')
                 ->latest()
-                ->get(),
+                ->paginate(10, ['*'], 'pending_page')
+                ->withQueryString(),
             'recent' => $base()
                 ->whereIn('status', [PublicContribution::STATUS_VALIDATED, PublicContribution::STATUS_REJECTED])
                 ->with('church:id,designation', 'event:id,title', 'reviewer:id,name')
                 ->latest('reviewed_at')
-                ->limit(30)
-                ->get(),
+                ->paginate(10, ['*'], 'recent_page')
+                ->withQueryString(),
         ]);
     }
 
