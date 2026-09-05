@@ -84,10 +84,12 @@ class OtpEmailDeliveryTest extends TestCase
         ]);
         $user = $this->user();
 
-        // Le code reste affiche a l'ecran, la connexion continue malgre l'echec SMTP.
+        // La connexion continue malgre l'echec SMTP (le code reste utilisable
+        // en session pour la verification), mais n'est jamais affiche a l'ecran.
         $this->post('/login', ['email' => $user->email, 'password' => 'password'])
             ->assertRedirect(route('otp.create'))
-            ->assertSessionHas('success', fn ($m) => str_contains((string) $m, 'demonstration'));
+            ->assertSessionHas('success', fn ($m) => is_string($m)
+                && ! preg_match('/\b\d{6}\b/', $m));
 
         $this->assertNotNull(session('auth.otp_code'));
     }

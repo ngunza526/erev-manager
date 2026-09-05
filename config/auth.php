@@ -119,11 +119,12 @@ return [
     | Challenge OTP (SEC-21)
     |--------------------------------------------------------------------------
     |
-    | otp_demo         : affiche le code sur l'ecran de connexion (jamais en
-    |                    production) et tolere un echec d'envoi email. Par defaut
-    |                    vrai hors production. Hors demo, le code est envoye par
-    |                    email (config MAIL_*) et un envoi impossible bloque la
-    |                    connexion.
+    | otp_demo         : le code n'est jamais affiche a l'ecran (livraison par
+    |                    email uniquement, config MAIL_*). Ce reglage tolere
+    |                    seulement un echec d'envoi email (utile en local/dev
+    |                    quand le SMTP n'est pas configure) ; hors demo, un
+    |                    envoi impossible bloque la connexion. Vrai par defaut
+    |                    hors production.
     | otp_ttl          : duree de validite du code, en secondes.
     | otp_max_attempts : nombre d'essais avant invalidation et retour au login.
     |

@@ -554,7 +554,7 @@ class AdvancedChurchModuleController extends Controller
             'module' => collect($config)->except(['model', 'rules'])->all(),
             'churches' => $scope->churches($request->user()),
             'options' => $this->options($module, $request, $scope),
-            'items' => $scope->scopeChurchOwned($model::with('church:id,designation'), $request->user())->latest()->paginate(15),
+            'items' => $scope->scopeChurchOwned($model::with('church:id,designation'), $request->user())->latest()->paginate(15)->withQueryString(),
         ]);
     }
 

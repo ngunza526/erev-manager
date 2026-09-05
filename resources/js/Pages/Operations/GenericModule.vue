@@ -2,6 +2,7 @@
 import { computed, reactive } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
+import Pagination from '../../Components/Pagination.vue';
 
 const props = defineProps({
   moduleKey: String,
@@ -31,6 +32,7 @@ const form = reactive({
 
 const submit = () => router.post(`/${props.moduleKey}`, form, { preserveScroll: true });
 const valueFor = (item, key) => item?.[key] ?? '';
+const formatDate = (value) => (value ? new Date(value).toLocaleDateString('fr-FR') : '—');
 const today = () => new Date().toISOString().slice(0, 10);
 const payItem = (item) => {
   if (props.moduleKey === 'fournisseurs') {
@@ -65,75 +67,123 @@ const closeCounseling = (item) => router.post(`/counseling/${item.id}/cloturer`,
       <p>{{ module.description }}</p>
     </section>
 
-    <div class="grid two">
+    <div class="grid">
       <form class="panel form" @submit.prevent="submit">
         <h2>Nouvelle saisie</h2>
-        <label>
-          Eglise
-          <select v-model="form.church_id" required>
-            <option value="">Choisir</option>
-            <option v-for="church in churches" :key="church.id" :value="church.id">{{ church.designation }}</option>
-          </select>
-        </label>
-
-        <template v-for="field in module.fields" :key="field.name">
-          <label v-if="field.type === 'textarea'">
-            {{ field.label }}
-            <textarea v-model="form[field.name]" :required="field.required"></textarea>
-          </label>
-          <label v-else-if="field.type === 'select'">
-            {{ field.label }}
-            <select v-model="form[field.name]" :required="field.required">
+        <div class="gm-grid">
+          <label>
+            Eglise
+            <select v-model="form.church_id" required>
               <option value="">Choisir</option>
-              <option v-for="option in (options[field.optionsKey] || [])" :key="option.value" :value="option.value">{{ option.label }}</option>
+              <option v-for="church in churches" :key="church.id" :value="church.id">{{ church.designation }}</option>
             </select>
           </label>
-          <label v-else-if="field.name === 'payment_method'">
-            {{ field.label }}
-            <select v-model="form[field.name]" :required="field.required">
-              <option v-for="(label, code) in paymentMethods" :key="code" :value="code">{{ label }}</option>
-            </select>
-          </label>
-          <label v-else-if="field.type === 'checkbox'" class="check-row">
-            <input v-model="form[field.name]" type="checkbox" />
-            <span>{{ field.label }}</span>
-          </label>
-          <label v-else>
-            {{ field.label }}
-            <input v-model="form[field.name]" :type="field.type || 'text'" :required="field.required" />
-          </label>
-        </template>
+
+          <template v-for="field in module.fields" :key="field.name">
+            <label v-if="field.type === 'textarea'" class="gm-span">
+              {{ field.label }}
+              <textarea v-model="form[field.name]" :required="field.required"></textarea>
+            </label>
+            <label v-else-if="field.type === 'select'">
+              {{ field.label }}
+              <select v-model="form[field.name]" :required="field.required">
+                <option value="">Choisir</option>
+                <option v-for="option in (options[field.optionsKey] || [])" :key="option.value" :value="option.value">{{ option.label }}</option>
+              </select>
+            </label>
+            <label v-else-if="field.name === 'payment_method'">
+              {{ field.label }}
+              <select v-model="form[field.name]" :required="field.required">
+                <option v-for="(label, code) in paymentMethods" :key="code" :value="code">{{ label }}</option>
+              </select>
+            </label>
+            <label v-else-if="field.type === 'checkbox'" class="check-row">
+              <input v-model="form[field.name]" type="checkbox" />
+              <span>{{ field.label }}</span>
+            </label>
+            <label v-else>
+              {{ field.label }}
+              <input v-model="form[field.name]" :type="field.type || 'text'" :required="field.required" />
+            </label>
+          </template>
+        </div>
 
         <button class="btn">Enregistrer</button>
       </form>
 
       <section class="panel">
-        <h2>Registre</h2>
-        <div class="list">
-          <article v-for="item in items.data" :key="item.id" class="item">
-            <header>
-              <strong>{{ valueFor(item, module.primary) }}</strong>
-              <small>{{ valueFor(item, module.badge) }}</small>
-            </header>
-            <small>{{ item.church?.designation }} - {{ valueFor(item, module.secondary) }}</small>
-            <div class="tags">
-              <span class="tag">#{{ item.id }}</span>
-              <span class="tag gold">{{ new Date(item.created_at).toLocaleDateString() }}</span>
-              <button v-if="canPay(item)" class="btn secondary" type="button" @click="payItem(item)">Payer et comptabiliser</button>
-              <span v-if="item.journal_entry_id" class="tag">ecriture #{{ item.journal_entry_id }}</span>
-              <span v-if="moduleKey === 'counseling' && item.confidentiality_level" class="tag">{{ item.confidentiality_level }}</span>
-            </div>
-            <div v-if="moduleKey === 'counseling'" class="workflow-actions">
-              <input v-model="counselingFor(item).appointment_date" type="date" />
-              <input v-model="counselingFor(item).next_follow_up_at" type="date" />
-              <input v-model="counselingFor(item).assigned_to" placeholder="Accompagnateur" />
-              <input v-model="counselingFor(item).last_follow_up_note" placeholder="Note confidentielle" />
-              <button class="btn secondary" type="button" @click="scheduleCounseling(item)">Planifier</button>
-              <button class="btn secondary" type="button" @click="closeCounseling(item)">Cloturer</button>
-            </div>
-          </article>
+        <h2>Registre <small>{{ items.total }} au total</small></h2>
+        <div class="gm-table-wrap">
+          <table class="gm-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>{{ module.primary }}</th>
+                <th>{{ module.secondary }}</th>
+                <th>{{ module.badge }}</th>
+                <th>Eglise</th>
+                <th>Cree le</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in items.data" :key="item.id">
+                <td>#{{ item.id }}</td>
+                <td><strong>{{ valueFor(item, module.primary) }}</strong></td>
+                <td>{{ valueFor(item, module.secondary) }}</td>
+                <td>{{ valueFor(item, module.badge) }}</td>
+                <td>{{ item.church?.designation ?? '—' }}</td>
+                <td>{{ formatDate(item.created_at) }}</td>
+                <td>
+                  <div class="gm-actions">
+                    <span v-if="item.journal_entry_id" class="tag">ecriture #{{ item.journal_entry_id }}</span>
+                    <span v-if="moduleKey === 'counseling' && item.confidentiality_level" class="tag">{{ item.confidentiality_level }}</span>
+                    <button v-if="canPay(item)" class="btn secondary sm" type="button" @click="payItem(item)">Payer et comptabiliser</button>
+
+                    <div v-if="moduleKey === 'counseling'" class="workflow-actions">
+                      <input v-model="counselingFor(item).appointment_date" type="date" />
+                      <input v-model="counselingFor(item).next_follow_up_at" type="date" />
+                      <input v-model="counselingFor(item).assigned_to" placeholder="Accompagnateur" />
+                      <input v-model="counselingFor(item).last_follow_up_note" placeholder="Note confidentielle" />
+                      <button class="btn secondary sm" type="button" @click="scheduleCounseling(item)">Planifier</button>
+                      <button class="btn secondary sm" type="button" @click="closeCounseling(item)">Cloturer</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="!items.data.length"><td colspan="7">Aucune saisie.</td></tr>
+            </tbody>
+          </table>
         </div>
+        <Pagination :meta="items" />
       </section>
     </div>
   </AppLayout>
 </template>
+
+<style scoped>
+.gm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.gm-span { grid-column: 1 / -1; }
+
+.gm-table-wrap { overflow-x: auto; }
+.gm-table { width: 100%; border-collapse: collapse; }
+.gm-table th,
+.gm-table td {
+  text-align: left;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+  vertical-align: middle;
+}
+.gm-table th { color: var(--muted); font-size: 12px; text-transform: uppercase; font-weight: 950; white-space: nowrap; }
+.gm-table tr:last-child td { border-bottom: 0; }
+
+.gm-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.btn.sm { min-height: 30px; padding: 0 10px; font-size: 12px; }
+</style>

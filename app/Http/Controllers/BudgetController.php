@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Budget;
-use App\Models\Church;
 use App\Services\AccessScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +16,7 @@ class BudgetController extends Controller
     {
         return Inertia::render('Budgets/Index', [
             'churches' => $scope->churches($request->user()),
-            'budgets' => $scope->scopeChurchOwned(Budget::with('church:id,designation')->withSum('expenses as spent_amount', 'amount'), $request->user())->latest()->paginate(15),
+            'budgets' => $scope->scopeChurchOwned(Budget::with('church:id,designation')->withSum('expenses as spent_amount', 'amount'), $request->user())->latest()->paginate(15)->withQueryString(),
         ]);
     }
 

@@ -64,12 +64,10 @@ class AuthenticatedSessionController extends Controller
         $request->session()->put('auth.otp_code', $otp);
         $request->session()->put('auth.otp_expires_at', now()->addSeconds($ttlSeconds)->getTimestamp());
 
-        $redirect = redirect()->route('otp.create');
-
-        // SEC-21 : le code n'est revele a l'ecran qu'en mode demo.
-        return config('auth.otp_demo')
-            ? $redirect->with('success', "Code OTP de demonstration: {$otp}")
-            : $redirect->with('success', 'Un code de connexion vient de vous etre envoye par email.');
+        // Le code n'est plus jamais affiche a l'ecran : la livraison par email
+        // est fiable, il n'y a donc plus de mode "demonstration" cote UI.
+        return redirect()->route('otp.create')
+            ->with('success', 'Un code de connexion vient de vous etre envoye par email.');
     }
 
     private function deliverOtp(User $user, string $otp, int $ttlMinutes): void

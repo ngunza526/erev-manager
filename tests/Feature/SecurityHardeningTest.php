@@ -101,16 +101,20 @@ class SecurityHardeningTest extends TestCase
         $this->assertNull(session('auth.pending_user_id'));
     }
 
-    public function test_otp_code_is_not_disclosed_when_demo_mode_is_off(): void
+    public function test_otp_code_is_never_disclosed_on_screen(): void
     {
-        config(['auth.otp_demo' => false]);
-        $user = $this->activeUser();
+        // Ni hors mode demo, ni en mode demo : la livraison email est fiable,
+        // le code n'apparait plus jamais dans la reponse.
+        foreach ([false, true] as $demo) {
+            config(['auth.otp_demo' => $demo]);
+            $user = $this->activeUser('otp-disclosure-'.($demo ? 'demo' : 'prod').'@ereve.cd');
 
-        $this->post('/login', ['email' => $user->email, 'password' => 'password'])
-            ->assertRedirect(route('otp.create'))
-            ->assertSessionHas('success', fn ($message) => is_string($message)
-                && ! str_contains($message, 'demonstration')
-                && ! preg_match('/\b\d{6}\b/', $message));
+            $this->post('/login', ['email' => $user->email, 'password' => 'password'])
+                ->assertRedirect(route('otp.create'))
+                ->assertSessionHas('success', fn ($message) => is_string($message)
+                    && ! str_contains($message, 'demonstration')
+                    && ! preg_match('/\b\d{6}\b/', $message));
+        }
     }
 
     // --- SEC-22 -----------------------------------------------------------

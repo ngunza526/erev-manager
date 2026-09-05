@@ -35,13 +35,14 @@ Legende gravite : **Haute** (exploitation directe / impact fort) ·
 - comparaison non constante (`!==`) ;
 - le statut `actif` du compte n'est pas re-verifie a l'etape 2.
 
-**Correctif applique** : code affiche uniquement en mode demo
-(`config('auth.otp_demo')`, faux en production) ; expiration configurable
-(`auth.otp_ttl`, 5 min par defaut) ; compteur de tentatives (5 max puis
-invalidation et retour au login) ; `hash_equals` ; re-verification du statut.
-Livraison du code par email hors mode demo
+**Correctif applique** : le code n'est plus jamais affiche a l'ecran (livraison
+email fiable, cf. B2) ; expiration configurable (`auth.otp_ttl`, 5 min par
+defaut) ; compteur de tentatives (5 max puis invalidation et retour au login) ;
+`hash_equals` ; re-verification du statut. Livraison du code par email
 (`EmailOtpCodeNotification`, transport `MAIL_*`) — un envoi impossible
-interrompt la connexion ; en mode demo l'echec est tolere.
+interrompt la connexion ; `config('auth.otp_demo')` ne fait plus que tolerer un
+echec d'envoi (utile en local/dev sans SMTP configure), il ne revele jamais le
+code.
 Option renforcee : 2FA par application d'authentification (TOTP, RFC 6238,
 `App\Support\Totp` + `users.otp_secret` chiffre). Quand elle est activee par
 l'utilisateur (`/securite/authentification`), elle remplace le code email a la

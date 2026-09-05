@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\BoardMeeting;
-use App\Models\Church;
 use App\Models\ChurchAsset;
 use App\Models\Communication;
 use App\Models\FacilityBooking;
@@ -245,7 +244,7 @@ class EngagementAdminModuleController extends Controller
             'moduleKey' => $module,
             'module' => collect($config)->except(['model', 'rules'])->all(),
             'churches' => $scope->churches($request->user()),
-            'items' => $scope->scopeChurchOwned($model::with('church:id,designation'), $request->user())->latest()->paginate(15),
+            'items' => $scope->scopeChurchOwned($model::with('church:id,designation'), $request->user())->latest()->paginate(15)->withQueryString(),
         ]);
     }
 
